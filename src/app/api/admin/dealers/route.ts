@@ -68,10 +68,7 @@ export async function POST(request: Request) {
       });
 
     if (createError || !createdUser.user) {
-      return NextResponse.json(
-        { error: "auth_user_create_failed", details: createError?.message },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "auth_user_create_failed" }, { status: 400 });
     }
 
     const managerId = createdUser.user.id;
@@ -100,10 +97,7 @@ export async function POST(request: Request) {
 
     if (dealerError || !dealer) {
       await service.auth.admin.deleteUser(managerId);
-      return NextResponse.json(
-        { error: "dealer_insert_failed", details: dealerError?.message },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "dealer_insert_failed" }, { status: 400 });
     }
 
     const { data: subscription, error: subError } = await service
@@ -119,10 +113,7 @@ export async function POST(request: Request) {
     if (subError || !subscription) {
       await service.from("dealers").delete().eq("id", dealer.id);
       await service.auth.admin.deleteUser(managerId);
-      return NextResponse.json(
-        { error: "subscription_insert_failed", details: subError?.message },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "subscription_insert_failed" }, { status: 400 });
     }
 
     const { error: staffError } = await service.from("dealer_staff").insert({
@@ -137,10 +128,7 @@ export async function POST(request: Request) {
       await service.from("dealer_subscriptions").delete().eq("id", subscription.id);
       await service.from("dealers").delete().eq("id", dealer.id);
       await service.auth.admin.deleteUser(managerId);
-      return NextResponse.json(
-        { error: "staff_insert_failed", details: staffError.message },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "staff_insert_failed" }, { status: 400 });
     }
 
     return NextResponse.json({
@@ -148,8 +136,7 @@ export async function POST(request: Request) {
       subscriptionId: subscription.id,
       managerUserId: managerId,
     });
-  } catch (e) {
-    const message = e instanceof Error ? e.message : "unknown_error";
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "server_error" }, { status: 500 });
   }
 }

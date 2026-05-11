@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,7 +53,7 @@ export function OnboardingWizard({ dealer, pkg, initialFullName }: Props) {
       await saveOnboardingProfile({ fullName });
       setStep(1);
     } catch {
-      toast.error(tCommon("error"));
+      toast.error(t("stepFailed"));
     } finally {
       setPending(false);
     }
@@ -68,7 +69,7 @@ export function OnboardingWizard({ dealer, pkg, initialFullName }: Props) {
       });
       setStep(2);
     } catch {
-      toast.error(tCommon("error"));
+      toast.error(t("stepFailed"));
     } finally {
       setPending(false);
     }
@@ -86,9 +87,9 @@ export function OnboardingWizard({ dealer, pkg, initialFullName }: Props) {
         method,
       });
       setPaymentId(id);
-      toast.success(tCommon("success"));
+      toast.success(t("onboardingPaymentReady"));
     } catch {
-      toast.error(tCommon("error"));
+      toast.error(t("stepFailed"));
     } finally {
       setPending(false);
     }
@@ -99,11 +100,11 @@ export function OnboardingWizard({ dealer, pkg, initialFullName }: Props) {
     setPending(true);
     try {
       await completeOnboardingPayment(paymentId);
-      toast.success(tCommon("success"));
+      toast.success(t("onboardingComplete"));
       router.replace("/dealer/dashboard");
       router.refresh();
     } catch {
-      toast.error(tCommon("error"));
+      toast.error(t("stepFailed"));
     } finally {
       setPending(false);
     }
@@ -142,9 +143,14 @@ export function OnboardingWizard({ dealer, pkg, initialFullName }: Props) {
                 required
               />
             </div>
-            <Button onClick={nextFromProfile} disabled={pending || !fullName.trim()}>
+            <LoadingButton
+              type="button"
+              onClick={nextFromProfile}
+              loading={pending}
+              disabled={!fullName.trim()}
+            >
               {tCommon("next")}
-            </Button>
+            </LoadingButton>
           </CardContent>
         </Card>
       ) : null}
@@ -177,9 +183,14 @@ export function OnboardingWizard({ dealer, pkg, initialFullName }: Props) {
               <Button variant="outline" onClick={() => setStep(0)} disabled={pending}>
                 {tCommon("back")}
               </Button>
-              <Button onClick={nextFromDealer} disabled={pending || !businessName.trim()}>
+              <LoadingButton
+                type="button"
+                onClick={nextFromDealer}
+                loading={pending}
+                disabled={!businessName.trim()}
+              >
                 {tCommon("next")}
-              </Button>
+              </LoadingButton>
             </div>
           </CardContent>
         </Card>
@@ -245,13 +256,13 @@ export function OnboardingWizard({ dealer, pkg, initialFullName }: Props) {
               ))}
             </div>
             {!paymentId ? (
-              <Button onClick={createPayment} disabled={pending}>
+              <LoadingButton type="button" onClick={createPayment} loading={pending}>
                 {tPay("generatePayment")}
-              </Button>
+              </LoadingButton>
             ) : (
-              <Button onClick={payAndFinish} disabled={pending}>
+              <LoadingButton type="button" onClick={payAndFinish} loading={pending}>
                 {tPay("completeSimulated")}
-              </Button>
+              </LoadingButton>
             )}
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setStep(2)} disabled={pending}>

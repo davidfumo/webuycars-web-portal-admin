@@ -1,57 +1,36 @@
 import { getTranslations } from "next-intl/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
+import { Link } from "@/i18n/navigation";
+import { ReferenceEntityManager } from "@/modules/admin/components/config/reference-entity-manager";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminBodyTypesPage() {
+export default async function AdminBodyTypesPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const supabase = await createServerSupabaseClient();
   const t = await getTranslations("Nav");
-  const tCommon = await getTranslations("Common");
+  const tAdmin = await getTranslations("Admin");
 
-  const { data: rows } = await supabase
-    .from("body_types")
-    .select("*")
-    .order("name", { ascending: true });
+  const { data: rows } = await supabase.from("body_types").select("*").order("name", { ascending: true });
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{t("adminBodyTypes")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{tAdmin("configTitle")}</p>
         </div>
         <Button asChild variant="outline">
           <Link href="/admin/config/brands">{t("adminBrands")}</Link>
         </Button>
       </div>
 
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-sm">
-            <thead className="bg-muted/60 text-left text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3">{tCommon("name")}</th>
-                <th className="px-4 py-3">{tCommon("status")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(rows ?? []).map((r) => (
-                <tr key={r.id} className="border-t border-border">
-                  <td className="px-4 py-3 font-medium">{r.name}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant={r.is_active ? "success" : "secondary"}>
-                      {r.is_active ? tCommon("active") : tCommon("inactive")}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      <ReferenceEntityManager kind="body_type" locale={locale} rows={rows ?? []} />
     </div>
   );
 }

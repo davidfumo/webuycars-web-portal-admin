@@ -2,35 +2,43 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Semantic tokens use HSL channels only (no hsl() wrapper) for Tailwind:
+  e.g. colors.primary => hsl(var(--primary) / <alpha>)
+  #F37021 ≈ hsl(20 89% 54%), #1C2431 ≈ hsl(222 27% 15%), canvas #F7F9FB ≈ hsl(210 40% 98%)
+*/
+
 :root {
-  --background: 247 249 251;
-  --foreground: 28 36 49;
-  --card: 255 255 255;
-  --card-foreground: 28 36 49;
-  --muted: 236 240 245;
-  --muted-foreground: 100 116 139;
-  --border: 226 232 240;
-  --primary: 243 112 33;
-  --primary-foreground: 255 255 255;
-  --accent: 28 36 49;
-  --accent-foreground: 255 255 255;
-  --ring: 243 112 33;
+  --background: 210 40% 98%;
+  --foreground: 222 27% 15%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 27% 15%;
+  --muted: 210 35% 96%;
+  --muted-foreground: 215 16% 40%;
+  --border: 214 25% 88%;
+  --input: 214 25% 88%;
+  --primary: 20 89% 54%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 222 27% 15%;
+  --accent-foreground: 0 0% 100%;
+  --ring: 20 89% 54%;
   --radius: 0.75rem;
 }
 
 .dark {
-  --background: 17 20 28;
-  --foreground: 241 245 249;
-  --card: 24 28 38;
-  --card-foreground: 241 245 249;
-  --muted: 36 42 56;
-  --muted-foreground: 148 163 184;
-  --border: 51 65 85;
-  --primary: 243 112 33;
-  --primary-foreground: 255 255 255;
-  --accent: 226 232 240;
-  --accent-foreground: 28 36 49;
-  --ring: 243 112 33;
+  --background: 222 47% 7%;
+  --foreground: 210 40% 98%;
+  --card: 222 35% 11%;
+  --card-foreground: 210 40% 98%;
+  --muted: 217 33% 16%;
+  --muted-foreground: 215 20% 70%;
+  --border: 217 28% 20%;
+  --input: 217 28% 22%;
+  --primary: 20 89% 54%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 217 33% 18%;
+  --accent-foreground: 210 40% 98%;
+  --ring: 20 89% 54%;
 }
 
 @layer base {

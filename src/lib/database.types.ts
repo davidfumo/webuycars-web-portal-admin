@@ -192,6 +192,8 @@ export interface Database {
           featured_listing_allowance: number;
           sponsored_listing_allowance: number;
           priority_support: boolean;
+          /** dealer | private | all — which channels can use this catalog row */
+          seller_scope: "dealer" | "private" | "all";
         };
         Insert: {
           id?: string;
@@ -206,6 +208,7 @@ export interface Database {
           featured_listing_allowance?: number;
           sponsored_listing_allowance?: number;
           priority_support?: boolean;
+          seller_scope?: "dealer" | "private" | "all";
         };
         Update: {
           id?: string;
@@ -220,6 +223,7 @@ export interface Database {
           featured_listing_allowance?: number;
           sponsored_listing_allowance?: number;
           priority_support?: boolean;
+          seller_scope?: "dealer" | "private" | "all";
         };
         Relationships: [];
       };
@@ -296,6 +300,7 @@ export interface Database {
           is_sponsored: boolean;
           featured_until: string | null;
           sponsored_until: string | null;
+          listing_billing_mode: "subscription_allowance" | "pay_per_listing" | null;
         };
         Insert: {
           id?: string;
@@ -330,6 +335,7 @@ export interface Database {
           is_sponsored?: boolean;
           featured_until?: string | null;
           sponsored_until?: string | null;
+          listing_billing_mode?: "subscription_allowance" | "pay_per_listing" | null;
         };
         Update: {
           id?: string;
@@ -364,6 +370,7 @@ export interface Database {
           is_sponsored?: boolean;
           featured_until?: string | null;
           sponsored_until?: string | null;
+          listing_billing_mode?: "subscription_allowance" | "pay_per_listing" | null;
         };
         Relationships: [];
       };

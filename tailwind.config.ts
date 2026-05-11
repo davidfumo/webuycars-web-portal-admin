@@ -22,6 +22,7 @@ export default {
           canvas: "#F7F9FB",
         },
         border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         card: {
@@ -50,6 +51,12 @@ export default {
       boxShadow: {
         card: "0 10px 40px -24px rgba(28, 36, 49, 0.35)",
         soft: "0 8px 30px rgba(28, 36, 49, 0.08)",
+      },
+      backgroundImage: {
+        "auth-canvas":
+          "radial-gradient(1200px circle at 15% 10%, hsl(20 89% 54% / 0.08), transparent 42%), radial-gradient(900px circle at 90% 80%, hsl(222 27% 15% / 0.06), transparent 45%), linear-gradient(180deg, hsl(var(--background)) 0%, hsl(210 40% 96%) 100%)",
+        "auth-canvas-dark":
+          "radial-gradient(900px circle at 20% 0%, hsl(20 89% 54% / 0.12), transparent 50%), linear-gradient(180deg, hsl(var(--background)) 0%, hsl(222 47% 5%) 100%)",
       },
       keyframes: {
         "fade-in": {

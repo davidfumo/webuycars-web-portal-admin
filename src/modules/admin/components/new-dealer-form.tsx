@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,9 +18,35 @@ type Props = {
   packages: Package[];
 };
 
+function mapDealerCreateError(code: string | undefined, tErr: (key: string) => string): string {
+  switch (code) {
+    case "unauthorized":
+      return tErr("unauthorized");
+    case "forbidden":
+      return tErr("forbidden");
+    case "service_role_missing":
+      return tErr("service_role_missing");
+    case "invalid_body":
+      return tErr("invalid_body");
+    case "auth_user_create_failed":
+      return tErr("auth_user_create_failed");
+    case "dealer_insert_failed":
+      return tErr("dealer_insert_failed");
+    case "subscription_insert_failed":
+      return tErr("subscription_insert_failed");
+    case "staff_insert_failed":
+      return tErr("staff_insert_failed");
+    case "server_error":
+      return tErr("server_error");
+    default:
+      return tErr("generic");
+  }
+}
+
 export function NewDealerForm({ provinces, packages }: Props) {
   const t = useTranslations("Admin");
   const tCommon = useTranslations("Common");
+  const tErr = useTranslations("AdminDealerCreate");
   const router = useRouter();
   const [pending, setPending] = useState(false);
 
@@ -52,10 +79,10 @@ export function NewDealerForm({ provinces, packages }: Props) {
       });
       const body = await res.json();
       if (!res.ok) {
-        toast.error(body?.error ?? tCommon("error"));
+        toast.error(mapDealerCreateError(typeof body?.error === "string" ? body.error : undefined, tErr));
         return;
       }
-      toast.success(tCommon("success"));
+      toast.success(t("dealerCreatedSuccess"));
       router.replace("/admin/dealers");
       router.refresh();
     } catch {
@@ -140,9 +167,9 @@ export function NewDealerForm({ provinces, packages }: Props) {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button type="submit" disabled={pending}>
+            <LoadingButton type="submit" loading={pending}>
               {tCommon("create")}
-            </Button>
+            </LoadingButton>
             <Button type="button" variant="outline" onClick={() => router.back()} disabled={pending}>
               {tCommon("cancel")}
             </Button>

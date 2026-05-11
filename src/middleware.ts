@@ -7,9 +7,8 @@ const intlMiddleware = createMiddleware(routing);
 
 export async function middleware(request: NextRequest) {
   const intlResponse = intlMiddleware(request);
-  if (intlResponse.headers.has("location")) {
-    return intlResponse;
-  }
+  // Always refresh the Supabase session on the outgoing response (including
+  // next-intl redirects) so auth cookies stay in sync with the server.
   return updateSession(request, intlResponse);
 }
 

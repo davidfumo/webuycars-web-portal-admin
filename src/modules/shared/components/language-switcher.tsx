@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Languages } from "lucide-react";
+import { Languages, Loader2 } from "lucide-react";
 
 export function LanguageSwitcher() {
   const t = useTranslations("Locale");
@@ -29,8 +29,12 @@ export function LanguageSwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" disabled={pending}>
-          <Languages className="h-4 w-4" />
+        <Button variant="ghost" size="icon" disabled={pending} aria-busy={pending}>
+          {pending ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+          ) : (
+            <Languages className="h-4 w-4" aria-hidden />
+          )}
           <span className="sr-only">Language</span>
         </Button>
       </DropdownMenuTrigger>

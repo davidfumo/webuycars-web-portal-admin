@@ -29,5 +29,5 @@ export default async function HomePage({
     redirect(`/${locale}/dealer/dashboard`);
   }
 
-  redirect(`/${locale}/login`);
+  redirect(`/${locale}/login?reason=noPortalAccess`);
 }
