@@ -41,11 +41,15 @@ export function CompleteInviteClient({ initialReason }: Props) {
   const [phase, setPhase] = useState<Phase>("loading");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [sessionEmail, setSessionEmail] = useState<string | null>(null);
   const hadTokensRef = useRef(false);
   const isNoPortalReturn = initialReason === "no-portal";
 
   useEffect(() => {
     hadTokensRef.current = urlHadAuthTokens();
+    void createBrowserSupabaseClient()
+      .auth.getSession()
+      .then(({ data }) => setSessionEmail(data.session?.user.email ?? null));
   }, []);
 
   useEffect(() => {
@@ -136,11 +140,29 @@ export function CompleteInviteClient({ initialReason }: Props) {
             <CardTitle className="text-lg">{t("completeInviteNoPortalHelpTitle")}</CardTitle>
             <CardDescription className="space-y-3">
               <span className="block">{t("completeInviteNoPortalHelpBody")}</span>
+              {sessionEmail ? (
+                <span className="block font-mono text-xs text-muted-foreground">
+                  {t("completeInviteNoPortalSignedInAs", { email: sessionEmail })}
+                </span>
+              ) : null}
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <CardContent className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <p className="text-xs text-muted-foreground">{t("completeInviteNoPortalHelpHint")}</p>
-            <SignOutButton />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  window.history.replaceState(null, "", window.location.pathname);
+                  router.replace("/");
+                  router.refresh();
+                }}
+              >
+                {t("completeInviteNoPortalRetry")}
+              </Button>
+              <SignOutButton />
+            </div>
           </CardContent>
         </Card>
       ) : null}

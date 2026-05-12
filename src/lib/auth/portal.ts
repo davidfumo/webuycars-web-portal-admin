@@ -75,11 +75,9 @@ export async function getPortalContext(): Promise<PortalContext | null> {
     .from("dealer_staff")
     .select("*")
     .eq("user_id", user.id)
-    .eq("is_active", true)
-    .limit(1);
+    .eq("is_active", true);
 
-  const staff = staffRows?.[0];
-  if (!staff) {
+  if (!staffRows?.length) {
     return {
       userId: user.id,
       email,
@@ -91,13 +89,28 @@ export async function getPortalContext(): Promise<PortalContext | null> {
     };
   }
 
-  const { data: dealerRow } = await supabase
-    .from("dealers")
-    .select("is_active")
-    .eq("id", staff.dealer_id)
-    .maybeSingle();
+  /** Prefer manager seat, stable order — `.limit(1)` alone could pick a suspended dealer first. */
+  const candidates = [...staffRows].sort((a, b) => {
+    if (a.role === "manager" && b.role !== "manager") return -1;
+    if (b.role === "manager" && a.role !== "manager") return 1;
+    return a.dealer_id.localeCompare(b.dealer_id);
+  });
 
-  if (!dealerRow?.is_active) {
+  let staff: StaffRow | null = null;
+  for (const candidate of candidates) {
+    const { data: dealerRow } = await supabase
+      .from("dealers")
+      .select("is_active")
+      .eq("id", candidate.dealer_id)
+      .maybeSingle();
+
+    if (dealerRow?.is_active) {
+      staff = candidate;
+      break;
+    }
+  }
+
+  if (!staff) {
     return {
       userId: user.id,
       email,

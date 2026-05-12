@@ -76,8 +76,10 @@
     "completeInviteStuckTitle": "Não foi possível concluir o acesso",
     "completeInviteStuckBody": "O link pode ter expirado, já ter sido usado ou estar bloqueado pelo navegador. Peça um novo link ao administrador e tente numa janela nova ou em modo privado.",
     "completeInviteNoPortalHelpTitle": "Esta conta ainda não está ligada à consola",
-    "completeInviteNoPortalHelpBody": "Está com sessão iniciada, mas este e-mail não está associado a administrador nem à equipa de um stand. Definir palavra-passe aqui não resolve isso sozinho.",
-    "completeInviteNoPortalHelpHint": "Peça ao administrador para o adicionar em «Equipa do portal» (stand) ou para o convidar como administrador. Se abriu a conta errada, saia e volte a usar o link do convite."
+    "completeInviteNoPortalHelpBody": "Está com sessão iniciada, mas esta conta não tem acesso útil à consola: ou não está ligada como administrador ou membro da equipa de um stand na base de dados, ou todos os stands a que pertence estão suspensos. Definir palavra-passe aqui não resolve isso sozinho.",
+    "completeInviteNoPortalHelpHint": "Peça ao administrador para o adicionar em «Equipa do portal» (stand) ou para o convidar como administrador. Se abriu a conta errada, saia e volte a usar o link do convite.",
+    "completeInviteNoPortalSignedInAs": "Sessão com: {email}",
+    "completeInviteNoPortalRetry": "Verificar acesso outra vez"
   },
   "Nav": {
     "adminDashboard": "Painel",
@@ -307,6 +309,8 @@
     "dealerTeamLinkManagerSuccessManual": "Gestor ligado. Foi gerado um novo link único—copie-o na janela e partilhe-o em segurança.",
     "dealerTeamEmptyHint": "Ainda não há membros do portal ligados. Introduza o e-mail registado do gestor acima e use «Ligar e enviar acesso».",
     "dealerTeamLinkErrDealerNotFound": "Este stand não foi encontrado.",
+    "dealerTeamLinkErrDealerInactive": "Este stand está suspenso. Active o stand no admin antes de ligar um gestor.",
+    "dealerTeamLinkErrStaffVerify": "A operação correu mas não foi possível confirmar a linha do gestor na base de dados. Tente novamente ou contacte o suporte.",
     "dealerTeamLinkErrUserNotFound": "Não existe conta com esse e-mail neste projecto. A pessoa tem de se registar primeiro, ou o e-mail no perfil pode estar escrito de forma diferente.",
     "dealerTeamLinkErrAmbiguousEmail": "Mais de um perfil corresponde a esse e-mail. Contacte o suporte para resolver a duplicidade.",
     "dealerTeamLinkErrCannotAdmin": "Contas de administrador do sistema não podem ser ligadas como gestor de stand.",

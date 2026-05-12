@@ -76,8 +76,10 @@
     "completeInviteStuckTitle": "We could not finish signing you in",
     "completeInviteStuckBody": "The link may be expired, already used, or blocked by the browser. Request a new access link from your administrator, then try again in a fresh window or private browsing mode.",
     "completeInviteNoPortalHelpTitle": "This account is not linked to the console yet",
-    "completeInviteNoPortalHelpBody": "You are signed in, but this email is not attached as an administrator or dealer team member. Setting a password here will not fix that by itself.",
-    "completeInviteNoPortalHelpHint": "Ask your administrator to add you under Portal team (dealer) or to invite you as admin. If you opened the wrong account, sign out and use the invite link again."
+    "completeInviteNoPortalHelpBody": "You are signed in, but this account has no usable portal access: either it is not linked as admin or dealer team member in our database, or every dealer you belong to is suspended. Setting a password here will not fix that by itself.",
+    "completeInviteNoPortalHelpHint": "Ask your administrator to add you under Portal team (dealer) or to invite you as admin. If you opened the wrong account, sign out and use the invite link again.",
+    "completeInviteNoPortalSignedInAs": "Signed in as: {email}",
+    "completeInviteNoPortalRetry": "Check access again"
   },
   "Nav": {
     "adminDashboard": "Dashboard",
@@ -307,6 +309,8 @@
     "dealerTeamLinkManagerSuccessManual": "Manager linked. A new one-time link was generated—copy it from the dialog and share it securely.",
     "dealerTeamEmptyHint": "No portal members are linked yet. Enter the manager’s registered email above, then “Link and send access”.",
     "dealerTeamLinkErrDealerNotFound": "This dealer could not be found.",
+    "dealerTeamLinkErrDealerInactive": "This dealer is suspended. Activate the dealer in admin before linking a manager.",
+    "dealerTeamLinkErrStaffVerify": "The link step ran but we could not confirm the manager row in the database. Try again or contact support.",
     "dealerTeamLinkErrUserNotFound": "No account with that email exists in this project. The person must sign up once first, or the email may be spelled differently than in their profile.",
     "dealerTeamLinkErrAmbiguousEmail": "More than one profile matched that email. Contact support to resolve the duplicate.",
     "dealerTeamLinkErrCannotAdmin": "System administrator accounts cannot be linked as a dealer manager.",

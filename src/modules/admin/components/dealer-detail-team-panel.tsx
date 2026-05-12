@@ -73,8 +73,10 @@ function mapLinkExistingError(code: string | undefined, t: (k: string) => string
       return t("dealerAdminErrInvalid");
     case "invalid_id":
       return t("dealerAdminErrInvalid");
-    case "dealer_not_found":
-      return t("dealerTeamLinkErrDealerNotFound");
+    case "dealer_inactive":
+      return t("dealerTeamLinkErrDealerInactive");
+    case "staff_verification_failed":
+      return t("dealerTeamLinkErrStaffVerify");
     case "user_not_found":
       return t("dealerTeamLinkErrUserNotFound");
     case "ambiguous_email":

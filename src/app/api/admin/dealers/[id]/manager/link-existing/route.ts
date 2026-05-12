@@ -55,9 +55,12 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     const emailNorm = parsed.data.email.trim();
     const sendAccess = parsed.data.sendAccess !== false;
 
-    const { data: dealer } = await service.from("dealers").select("id").eq("id", dealerId).maybeSingle();
+    const { data: dealer } = await service.from("dealers").select("id,is_active").eq("id", dealerId).maybeSingle();
     if (!dealer) {
       return NextResponse.json({ error: "dealer_not_found" }, { status: 404 });
+    }
+    if (!dealer.is_active) {
+      return NextResponse.json({ error: "dealer_inactive" }, { status: 400 });
     }
 
     const { data: userRows, error: userLookupErr } = await service
@@ -159,6 +162,19 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
       await service.auth.admin.updateUserById(target.id, {
         user_metadata: { ...managerMeta },
       });
+    }
+
+    const { data: verifyStaff } = await service
+      .from("dealer_staff")
+      .select("id")
+      .eq("dealer_id", dealerId)
+      .eq("user_id", target.id)
+      .eq("role", "manager")
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (!verifyStaff) {
+      return NextResponse.json({ error: "staff_verification_failed" }, { status: 500 });
     }
 
     if (!sendAccess) {
