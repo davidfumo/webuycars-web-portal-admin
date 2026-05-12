@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createRouteHandlerSupabaseClient } from "@/lib/supabase/route-handler";
 import { createServiceSupabaseClient } from "@/lib/supabase/admin";
+import { portalInviteCallbackUrl } from "@/lib/auth/portal-invite-callback-url";
 import { sendDealerManagerAccess } from "@/lib/admin/send-dealer-manager-access";
 
 const bodySchema = z.object({
@@ -71,7 +72,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
 
     const origin = new URL(request.url).origin;
     const loc = parsed.data.portalLocale ?? "pt";
-    const redirectTo = `${origin}/${loc}/login`;
+    const redirectTo = portalInviteCallbackUrl(origin, loc);
 
     const access = await sendDealerManagerAccess(service, managerEmail, redirectTo);
     if (!access.ok) {

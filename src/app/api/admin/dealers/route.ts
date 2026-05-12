@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createRouteHandlerSupabaseClient } from "@/lib/supabase/route-handler";
 import { createServiceSupabaseClient } from "@/lib/supabase/admin";
 import { slugify } from "@/lib/slugify";
+import { portalInviteCallbackUrl } from "@/lib/auth/portal-invite-callback-url";
 
 const createDealerSchema = z.object({
   businessName: z.string().min(2),
@@ -13,7 +14,7 @@ const createDealerSchema = z.object({
   packageId: z.string().uuid(),
   managerEmail: z.string().email(),
   logoUrl: z.string().url().optional().nullable(),
-  /** Locale segment for the manager’s first login redirect (e.g. `/en/login`). */
+  /** Locale segment for the manager’s invite redirect (e.g. `/en/auth/complete-invite`). */
   portalLocale: z.enum(["pt", "en"]).optional(),
 });
 
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
 
     const origin = new URL(request.url).origin;
     const loc = body.portalLocale ?? "pt";
-    const redirectTo = `${origin}/${loc}/login`;
+    const redirectTo = portalInviteCallbackUrl(origin, loc);
 
     const invited = await service.auth.admin.inviteUserByEmail(body.managerEmail, {
       data: { ...managerMeta },
