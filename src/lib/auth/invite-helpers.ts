@@ -18,8 +18,7 @@ export function isEmailAlreadyRegisteredError(err: { message?: string; code?: st
 type ServiceClient = SupabaseClient<Database>;
 
 export type InviteUserResult =
-  | { ok: true; userId: string; emailSent: true; setupLink: null }
-  | { ok: true; userId: string; emailSent: false; setupLink: string }
+  | { ok: true; userId: string; emailSent: boolean; setupLink: string | null }
   | { ok: false; error: "email_exists" | "invite_failed" };
 
 /**
@@ -49,7 +48,20 @@ export async function inviteUserWithEmailFallback(
         portalPending.staffRole,
       );
     }
-    return { ok: true, userId, emailSent: true, setupLink: null };
+    /** Same link the email would contain — lets admins share access if the inbox never receives mail. */
+    const backup = await service.auth.admin.generateLink({
+      type: "invite",
+      email,
+      options: {
+        data: userMetadata,
+        redirectTo,
+      },
+    });
+    const setupLink =
+      !backup.error && backup.data.properties?.action_link
+        ? backup.data.properties.action_link
+        : null;
+    return { ok: true, userId, emailSent: true, setupLink };
   }
 
   if (isEmailAlreadyRegisteredError(invited.error)) {
@@ -65,7 +77,7 @@ export async function inviteUserWithEmailFallback(
     },
   });
 
-  if (generated.error || !generated.data.user || !generated.data.properties) {
+  if (generated.error || !generated.data.user || !generated.data.properties?.action_link) {
     return { ok: false, error: "invite_failed" };
   }
 

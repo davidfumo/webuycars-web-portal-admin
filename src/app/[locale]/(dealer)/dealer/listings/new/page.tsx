@@ -1,44 +1,21 @@
 import { getTranslations } from "next-intl/server";
 import { getPortalContext } from "@/lib/auth/portal";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceSupabaseClient } from "@/lib/supabase/admin";
+import { loadDealerListingSubscriptionSnapshot } from "@/lib/dealer/dealer-listing-subscription-snapshot";
 import { NewDealerListingForm } from "@/modules/dealer/components/new-dealer-listing-form";
-import type { DealerSubscriptionSummary } from "@/modules/dealer/types/subscription-summary";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewDealerListingPage() {
   const ctx = await getPortalContext();
   const t = await getTranslations("Dealer");
-  const supabase = await createServerSupabaseClient();
 
   if (!ctx || ctx.surface !== "dealer") return null;
 
-  const { data: subRow } = await supabase
-    .from("dealer_subscriptions")
-    .select("listings_used, package_id")
-    .eq("dealer_id", ctx.dealerId)
-    .eq("status", "active")
-    .maybeSingle();
+  const service = createServiceSupabaseClient();
+  const subSnap = await loadDealerListingSubscriptionSnapshot(ctx.dealerId);
 
-  let subscription: DealerSubscriptionSummary | null = null;
-  if (subRow) {
-    const { data: pkg } = await supabase
-      .from("dealer_packages")
-      .select("name, listing_limit, price_per_extra_listing")
-      .eq("id", subRow.package_id)
-      .maybeSingle();
-    if (pkg) {
-      subscription = {
-        packageName: pkg.name,
-        listingsUsed: subRow.listings_used,
-        listingLimit: pkg.listing_limit,
-        payPerExtra: Number(pkg.price_per_extra_listing),
-        hasCapacity: subRow.listings_used < pkg.listing_limit,
-      };
-    }
-  }
-
-  const { data: feeRows } = await supabase
+  const { data: feeRows } = await service
     .from("dealer_packages")
     .select("price_per_extra_listing")
     .eq("is_active", true)
@@ -48,9 +25,9 @@ export default async function NewDealerListingPage() {
 
   const referencePayPerListing = feeRows?.[0]
     ? Number(feeRows[0].price_per_extra_listing)
-    : subscription?.payPerExtra ?? 0;
+    : subSnap.activeSummary?.payPerExtra ?? 0;
 
-  const { count: privatePlanCount } = await supabase
+  const { count: privatePlanCount } = await service
     .from("dealer_packages")
     .select("id", { count: "exact", head: true })
     .eq("is_active", true)
@@ -63,7 +40,16 @@ export default async function NewDealerListingPage() {
       </div>
       <NewDealerListingForm
         dealerId={ctx.dealerId}
-        subscription={subscription}
+        subscription={subSnap.activeSummary}
+        subscriptionPendingPayment={subSnap.latestSubscriptionStatus === "pending_payment"}
+        subscriptionInactiveStatus={
+          subSnap.latestSubscriptionStatus &&
+          subSnap.latestSubscriptionStatus !== "active" &&
+          subSnap.latestSubscriptionStatus !== "pending_payment"
+            ? subSnap.latestSubscriptionStatus
+            : null
+        }
+        gatedPackageName={subSnap.packageName}
         referencePayPerListing={referencePayPerListing}
         privatePlanCount={privatePlanCount ?? 0}
       />

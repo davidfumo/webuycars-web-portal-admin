@@ -46,12 +46,13 @@ export function AdminInviteAdminForm() {
         return;
       }
       const link = typeof body.setupLink === "string" ? body.setupLink : null;
+      const emailed = Boolean(body.inviteEmailSent);
       if (link) {
         setSetupLink(link);
         setLinkOpen(true);
-        toast.success(t("inviteSuccessManual"));
+        toast.success(emailed ? t("inviteSuccessHybrid") : t("inviteSuccessManual"));
       } else {
-        toast.success(t("inviteSuccessEmail"));
+        toast.success(t("inviteSuccessEmailOnly"));
         setEmail("");
         router.refresh();
       }

@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceSupabaseClient } from "@/lib/supabase/admin";
 import { getPortalContext } from "@/lib/auth/portal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 export const dynamic = "force-dynamic";
 
 export default async function DealerListingsPage() {
-  const supabase = await createServerSupabaseClient();
   const ctx = await getPortalContext();
   const t = await getTranslations("Dealer");
   const tCommon = await getTranslations("Common");
@@ -17,7 +16,8 @@ export default async function DealerListingsPage() {
 
   if (!ctx || ctx.surface !== "dealer") return null;
 
-  const { data: rows } = await supabase
+  const service = createServiceSupabaseClient();
+  const { data: rows } = await service
     .from("vehicle_listings")
     .select("id,title,status,created_at,price,currency")
     .eq("dealer_id", ctx.dealerId)

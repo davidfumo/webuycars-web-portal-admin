@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceSupabaseClient } from "@/lib/supabase/admin";
+import { loadDealerListingSubscriptionSnapshot } from "@/lib/dealer/dealer-listing-subscription-snapshot";
 
 export type CreateDealerDraftResult =
   | { ok: true; listingId: string }
@@ -10,6 +12,7 @@ export type CreateDealerDraftResult =
       code:
         | "unauthorized"
         | "no_active_subscription"
+        | "subscription_pending_payment"
         | "subscription_full"
         | "invalid_title"
         | "persist_failed";
@@ -33,25 +36,30 @@ export async function createDraftDealerListing(input: {
     return { ok: false, code: "unauthorized" };
   }
 
-  if (input.billingMode === "subscription_allowance") {
-    const { data: sub } = await supabase
-      .from("dealer_subscriptions")
-      .select("id, status, listings_used, package_id")
-      .eq("dealer_id", input.dealerId)
-      .eq("status", "active")
-      .maybeSingle();
+  const service = createServiceSupabaseClient();
+  const { data: member } = await service
+    .from("dealer_staff")
+    .select("id")
+    .eq("dealer_id", input.dealerId)
+    .eq("user_id", user.id)
+    .eq("is_active", true)
+    .maybeSingle();
 
-    if (!sub) {
+  if (!member) {
+    return { ok: false, code: "unauthorized" };
+  }
+
+  if (input.billingMode === "subscription_allowance") {
+    const snap = await loadDealerListingSubscriptionSnapshot(input.dealerId);
+
+    if (!snap.activeSummary) {
+      if (snap.latestSubscriptionStatus === "pending_payment") {
+        return { ok: false, code: "subscription_pending_payment" };
+      }
       return { ok: false, code: "no_active_subscription" };
     }
 
-    const { data: pkg } = await supabase
-      .from("dealer_packages")
-      .select("listing_limit")
-      .eq("id", sub.package_id)
-      .maybeSingle();
-
-    if (!pkg || sub.listings_used >= pkg.listing_limit) {
+    if (!snap.activeSummary.hasCapacity) {
       return { ok: false, code: "subscription_full" };
     }
   }

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +17,12 @@ type BillingChoice = "subscription_allowance" | "pay_per_listing";
 type Props = {
   dealerId: string;
   subscription: DealerSubscriptionSummary | null;
+  /** Latest row is still awaiting first subscription payment */
+  subscriptionPendingPayment?: boolean;
+  /** Non-active, non-pending status on latest row (e.g. suspended, expired) */
+  subscriptionInactiveStatus?: string | null;
+  /** Package name when subscription row exists but is not active */
+  gatedPackageName?: string | null;
   referencePayPerListing: number;
   privatePlanCount: number;
 };
@@ -24,6 +30,9 @@ type Props = {
 export function NewDealerListingForm({
   dealerId,
   subscription,
+  subscriptionPendingPayment = false,
+  subscriptionInactiveStatus = null,
+  gatedPackageName = null,
   referencePayPerListing,
   privatePlanCount,
 }: Props) {
@@ -61,8 +70,9 @@ export function NewDealerListingForm({
       });
       if (!result.ok) {
         if (result.code === "unauthorized") toast.error(tCommon("sessionExpired"));
-        else if (result.code === "no_active_subscription") {
-          toast.error(tBill("noSubscriptionTitle"));
+        else if (result.code === "no_active_subscription") toast.error(tBill("noSubscriptionTitle"));
+        else if (result.code === "subscription_pending_payment") {
+          toast.error(tBill("pendingPaymentToast"));
         } else if (result.code === "subscription_full") {
           toast.error(tBill("subscriptionFull"));
         } else if (result.code === "invalid_title") {
@@ -94,15 +104,7 @@ export function NewDealerListingForm({
           <CardDescription>{tBill("sectionHint")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {!subscription ? (
-            <div
-              role="status"
-              className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground"
-            >
-              <p className="font-medium text-foreground">{tBill("noSubscriptionTitle")}</p>
-              <p className="mt-1">{tBill("noSubscriptionBody")}</p>
-            </div>
-          ) : (
+          {subscription ? (
             <p className="text-sm text-muted-foreground">
               {tBill("capacity", {
                 used: subscription.listingsUsed,
@@ -110,6 +112,38 @@ export function NewDealerListingForm({
                 name: subscription.packageName,
               })}
             </p>
+          ) : subscriptionPendingPayment ? (
+            <div
+              role="status"
+              className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-muted-foreground"
+            >
+              <p className="font-medium text-foreground">{tBill("pendingPaymentTitle")}</p>
+              <p className="mt-1">{tBill("pendingPaymentBody", { package: gatedPackageName ?? "—" })}</p>
+              <Button asChild className="mt-3" size="sm" variant="secondary">
+                <Link href="/dealer/subscription">{tBill("pendingPaymentCta")}</Link>
+              </Button>
+            </div>
+          ) : subscriptionInactiveStatus ? (
+            <div
+              role="status"
+              className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground"
+            >
+              <p className="font-medium text-foreground">{tBill("subscriptionInactiveTitle")}</p>
+              <p className="mt-1">
+                {tBill("subscriptionInactiveBody", {
+                  status: subscriptionInactiveStatus,
+                  package: gatedPackageName ?? "—",
+                })}
+              </p>
+            </div>
+          ) : (
+            <div
+              role="status"
+              className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground"
+            >
+              <p className="font-medium text-foreground">{tBill("noSubscriptionTitle")}</p>
+              <p className="mt-1">{tBill("noSubscriptionBody")}</p>
+            </div>
           )}
           <p className="text-sm text-muted-foreground">
             {tBill("referenceFee", { amount: Number(feeHint).toLocaleString() })}

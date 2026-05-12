@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceSupabaseClient } from "@/lib/supabase/admin";
 import { getPortalContext } from "@/lib/auth/portal";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,6 @@ import { DealerInviteStaffForm } from "@/modules/dealer/components/dealer-invite
 export const dynamic = "force-dynamic";
 
 export default async function DealerStaffPage() {
-  const supabase = await createServerSupabaseClient();
   const ctx = await getPortalContext();
   const t = await getTranslations("Dealer");
   const tCommon = await getTranslations("Common");
@@ -16,7 +15,9 @@ export default async function DealerStaffPage() {
 
   if (!ctx || ctx.surface !== "dealer") return null;
 
-  const { data: staff } = await supabase
+  const service = createServiceSupabaseClient();
+
+  const { data: staff } = await service
     .from("dealer_staff")
     .select("id,user_id,role,is_active,onboarding_required,onboarding_completed_at")
     .eq("dealer_id", ctx.dealerId)
@@ -25,7 +26,7 @@ export default async function DealerStaffPage() {
   const userIds = [...new Set((staff ?? []).map((s) => s.user_id))];
   const { data: userRows } =
     userIds.length > 0
-      ? await supabase.from("users").select("id,email,role").in("id", userIds)
+      ? await service.from("users").select("id,email,role").in("id", userIds)
       : { data: [] as { id: string; email: string | null; role: string }[] };
 
   const userById = Object.fromEntries((userRows ?? []).map((u) => [u.id, u]));

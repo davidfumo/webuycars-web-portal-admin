@@ -53,12 +53,13 @@ export function DealerInviteStaffForm({ canInvite }: Props) {
         return;
       }
       const link = typeof body.setupLink === "string" ? body.setupLink : null;
+      const emailed = Boolean(body.inviteEmailSent);
       if (link) {
         setSetupLink(link);
         setLinkOpen(true);
-        toast.success(t("inviteStaffSuccessManual"));
+        toast.success(emailed ? t("inviteStaffSuccessHybrid") : t("inviteStaffSuccessManual"));
       } else {
-        toast.success(t("inviteStaffSuccessEmail"));
+        toast.success(t("inviteStaffSuccessEmailOnly"));
         setEmail("");
         router.refresh();
       }
