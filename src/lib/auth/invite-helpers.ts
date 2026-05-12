@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
+import { stampPortalPendingDealerInvite } from "@/lib/auth/portal-pending-invite";
 
 export function isEmailAlreadyRegisteredError(err: { message?: string; code?: string } | null): boolean {
   if (!err) return false;
@@ -30,6 +31,7 @@ export async function inviteUserWithEmailFallback(
   email: string,
   redirectTo: string,
   userMetadata: Record<string, string>,
+  portalPending?: { dealerId: string; staffRole: "manager" | "staff" },
 ): Promise<InviteUserResult> {
   const invited = await service.auth.admin.inviteUserByEmail(email, {
     data: userMetadata,
@@ -39,6 +41,14 @@ export async function inviteUserWithEmailFallback(
   if (!invited.error && invited.data.user) {
     const userId = invited.data.user.id;
     await service.auth.admin.updateUserById(userId, { user_metadata: userMetadata });
+    if (portalPending) {
+      await stampPortalPendingDealerInvite(
+        service,
+        userId,
+        portalPending.dealerId,
+        portalPending.staffRole,
+      );
+    }
     return { ok: true, userId, emailSent: true, setupLink: null };
   }
 
@@ -61,6 +71,14 @@ export async function inviteUserWithEmailFallback(
 
   const userId = generated.data.user.id;
   await service.auth.admin.updateUserById(userId, { user_metadata: userMetadata });
+  if (portalPending) {
+    await stampPortalPendingDealerInvite(
+      service,
+      userId,
+      portalPending.dealerId,
+      portalPending.staffRole,
+    );
+  }
   return {
     ok: true,
     userId,

@@ -34,6 +34,20 @@ type Props = {
   initialReason?: string;
 };
 
+async function requestPortalMembershipSync(): Promise<boolean> {
+  try {
+    const res = await fetch("/api/auth/sync-portal-membership", {
+      method: "POST",
+      credentials: "same-origin",
+    });
+    if (!res.ok) return false;
+    const body = (await res.json()) as { synced?: boolean };
+    return Boolean(body.synced);
+  } catch {
+    return false;
+  }
+}
+
 export function CompleteInviteClient({ initialReason }: Props) {
   const t = useTranslations("Auth");
   const tCommon = useTranslations("Common");
@@ -42,7 +56,9 @@ export function CompleteInviteClient({ initialReason }: Props) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+  const [noPortalSyncing, setNoPortalSyncing] = useState(false);
   const hadTokensRef = useRef(false);
+  const syncTriedRef = useRef(false);
   const isNoPortalReturn = initialReason === "no-portal";
 
   useEffect(() => {
@@ -60,7 +76,18 @@ export function CompleteInviteClient({ initialReason }: Props) {
       if (cancelled) return;
       if (session) {
         if (isNoPortalReturn && !hadTokensRef.current) {
-          setPhase("no_portal_help");
+          if (syncTriedRef.current) return;
+          syncTriedRef.current = true;
+          void (async () => {
+            const synced = await requestPortalMembershipSync();
+            if (cancelled) return;
+            if (synced) {
+              router.replace("/");
+              router.refresh();
+              return;
+            }
+            setPhase("no_portal_help");
+          })();
           return;
         }
         setPhase("form");
@@ -95,7 +122,7 @@ export function CompleteInviteClient({ initialReason }: Props) {
       sub.subscription.unsubscribe();
       window.clearTimeout(tSlow);
     };
-  }, [isNoPortalReturn]);
+  }, [isNoPortalReturn, router]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -115,6 +142,7 @@ export function CompleteInviteClient({ initialReason }: Props) {
       setPhase("form");
       return;
     }
+    await requestPortalMembershipSync();
     toast.success(t("completeInviteSuccess"));
     router.replace("/");
     router.refresh();
@@ -153,10 +181,23 @@ export function CompleteInviteClient({ initialReason }: Props) {
               <Button
                 type="button"
                 variant="secondary"
+                disabled={noPortalSyncing}
                 onClick={() => {
-                  window.history.replaceState(null, "", window.location.pathname);
-                  router.replace("/");
-                  router.refresh();
+                  void (async () => {
+                    setNoPortalSyncing(true);
+                    try {
+                      const synced = await requestPortalMembershipSync();
+                      if (synced) {
+                        window.history.replaceState(null, "", window.location.pathname);
+                        router.replace("/");
+                        router.refresh();
+                        return;
+                      }
+                      toast.error(tCommon("error"));
+                    } finally {
+                      setNoPortalSyncing(false);
+                    }
+                  })();
                 }}
               >
                 {t("completeInviteNoPortalRetry")}

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createRouteHandlerSupabaseClient } from "@/lib/supabase/route-handler";
 import { createServiceSupabaseClient } from "@/lib/supabase/admin";
 import { portalInviteCallbackUrl } from "@/lib/auth/portal-invite-callback-url";
+import { stampPortalPendingDealerInvite } from "@/lib/auth/portal-pending-invite";
 import { sendDealerManagerAccess } from "@/lib/admin/send-dealer-manager-access";
 
 const bodySchema = z.object({
@@ -97,6 +98,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
 
     if (existingManager?.user_id === target.id) {
       if (!sendAccess) {
+        await stampPortalPendingDealerInvite(service, target.id, dealerId, "manager");
         return NextResponse.json({
           linked: true,
           alreadyManager: true,
@@ -177,6 +179,8 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
       return NextResponse.json({ error: "staff_verification_failed" }, { status: 500 });
     }
 
+    await stampPortalPendingDealerInvite(service, target.id, dealerId, "manager");
+
     if (!sendAccess) {
       return NextResponse.json({
         linked: true,
@@ -194,7 +198,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
       return NextResponse.json({ error: "manager_email_missing" }, { status: 400 });
     }
 
-    const access = await sendDealerManagerAccess(service, managerEmail, redirectTo);
+    const access = await sendDealerManagerAccess(service, managerEmail, redirectTo, { dealerId });
     if (!access.ok) {
       return NextResponse.json({ error: access.error }, { status: 400 });
     }

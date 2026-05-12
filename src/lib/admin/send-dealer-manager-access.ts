@@ -1,7 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
+import { stampPortalPendingByEmail, stampPortalPendingDealerInvite } from "@/lib/auth/portal-pending-invite";
 
 const managerMeta = { role: "dealer_manager" } as const;
+
+export type SendDealerManagerAccessOptions = {
+  /** When set, stamps Auth app_metadata so `/api/auth/sync-portal-membership` can repair `dealer_staff` after login. */
+  dealerId?: string;
+};
 
 export type SendDealerManagerAccessResult =
   | { ok: true; inviteEmailSent: true; setupLink: null; linkKind: "invite" }
@@ -15,6 +21,7 @@ export async function sendDealerManagerAccess(
   service: SupabaseClient<Database>,
   managerEmail: string,
   redirectTo: string,
+  options?: SendDealerManagerAccessOptions,
 ): Promise<SendDealerManagerAccessResult> {
   const invited = await service.auth.admin.inviteUserByEmail(managerEmail, {
     data: { ...managerMeta },
@@ -25,6 +32,9 @@ export async function sendDealerManagerAccess(
     await service.auth.admin.updateUserById(invited.data.user.id, {
       user_metadata: { ...managerMeta },
     });
+    if (options?.dealerId) {
+      await stampPortalPendingDealerInvite(service, invited.data.user.id, options.dealerId, "manager");
+    }
     return { ok: true, inviteEmailSent: true, setupLink: null, linkKind: "invite" };
   }
 
@@ -34,6 +44,9 @@ export async function sendDealerManagerAccess(
     options: { redirectTo },
   });
   if (!recovery.error && recovery.data.properties?.action_link) {
+    if (options?.dealerId) {
+      await stampPortalPendingByEmail(service, managerEmail, options.dealerId, "manager");
+    }
     return {
       ok: true,
       inviteEmailSent: false,
@@ -48,6 +61,9 @@ export async function sendDealerManagerAccess(
     options: { redirectTo },
   });
   if (!magic.error && magic.data.properties?.action_link) {
+    if (options?.dealerId) {
+      await stampPortalPendingByEmail(service, managerEmail, options.dealerId, "manager");
+    }
     return {
       ok: true,
       inviteEmailSent: false,

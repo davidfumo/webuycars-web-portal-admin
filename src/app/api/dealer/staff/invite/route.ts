@@ -64,6 +64,7 @@ export async function POST(request: Request) {
       parsed.data.email,
       redirectTo,
       { role: "dealer_staff" },
+      { dealerId: managerRow.dealer_id, staffRole: "staff" },
     );
 
     if (!invited.ok) {

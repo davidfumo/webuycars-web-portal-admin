@@ -4,6 +4,7 @@ import { createRouteHandlerSupabaseClient } from "@/lib/supabase/route-handler";
 import { createServiceSupabaseClient } from "@/lib/supabase/admin";
 import { slugify } from "@/lib/slugify";
 import { portalInviteCallbackUrl } from "@/lib/auth/portal-invite-callback-url";
+import { stampPortalPendingDealerInvite } from "@/lib/auth/portal-pending-invite";
 
 const createDealerSchema = z.object({
   businessName: z.string().min(2),
@@ -168,6 +169,8 @@ export async function POST(request: Request) {
       await service.auth.admin.deleteUser(managerId);
       return NextResponse.json({ error: "staff_insert_failed" }, { status: 400 });
     }
+
+    await stampPortalPendingDealerInvite(service, managerId, dealer.id, "manager");
 
     const { data: pkgRow, error: pkgErr } = await service
       .from("dealer_packages")

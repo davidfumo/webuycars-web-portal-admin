@@ -74,7 +74,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
     const loc = parsed.data.portalLocale ?? "pt";
     const redirectTo = portalInviteCallbackUrl(origin, loc);
 
-    const access = await sendDealerManagerAccess(service, managerEmail, redirectTo);
+    const access = await sendDealerManagerAccess(service, managerEmail, redirectTo, { dealerId });
     if (!access.ok) {
       return NextResponse.json({ error: access.error }, { status: 400 });
     }
