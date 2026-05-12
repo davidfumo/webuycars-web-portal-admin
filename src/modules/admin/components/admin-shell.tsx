@@ -11,6 +11,7 @@ import {
   LineChart,
   Package,
   Settings2,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LanguageSwitcher } from "@/modules/shared/components/language-switcher";
@@ -21,6 +22,7 @@ import { Separator } from "@/components/ui/separator";
 const nav = [
   { href: "/admin/dashboard", key: "adminDashboard", icon: LayoutDashboard },
   { href: "/admin/dealers", key: "adminDealers", icon: Building2 },
+  { href: "/admin/users", key: "adminUsers", icon: Users },
   { href: "/admin/packages", key: "adminPackages", icon: Package },
   { href: "/admin/listings", key: "adminListings", icon: Car },
   { href: "/admin/payments", key: "adminPayments", icon: CreditCard },

@@ -79,6 +79,26 @@ export async function createSubscriptionCheckoutPayment(input: {
 
   if (!pkg) throw new Error("missing_package");
 
+  const { data: existing } = await supabase
+    .from("payments")
+    .select("id")
+    .eq("subscription_id", sub.id)
+    .eq("payment_type", "subscription")
+    .eq("payment_status", "pending")
+    .maybeSingle();
+
+  if (existing?.id) {
+    const { error: upErr } = await supabase
+      .from("payments")
+      .update({
+        amount: pkg.price,
+        payment_method: input.method,
+      })
+      .eq("id", existing.id);
+    if (upErr) throw upErr;
+    return { paymentId: existing.id };
+  }
+
   const { data: payment, error } = await supabase
     .from("payments")
     .insert({

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { toast } from "sonner";
@@ -26,9 +26,16 @@ type Props = {
   dealer: DealerRow;
   pkg: PackageRow;
   initialFullName?: string | null;
+  /** Pre-created pending subscription payment (e.g. from admin provisioning). */
+  initialPendingPaymentId?: string | null;
 };
 
-export function OnboardingWizard({ dealer, pkg, initialFullName }: Props) {
+export function OnboardingWizard({
+  dealer,
+  pkg,
+  initialFullName,
+  initialPendingPaymentId,
+}: Props) {
   const t = useTranslations("Dealer");
   const tCommon = useTranslations("Common");
   const tPay = useTranslations("Payment");
@@ -41,6 +48,12 @@ export function OnboardingWizard({ dealer, pkg, initialFullName }: Props) {
   const [method, setMethod] = useState<"mpesa" | "emola" | "card">("mpesa");
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    if (initialPendingPaymentId) {
+      setPaymentId(initialPendingPaymentId);
+    }
+  }, [initialPendingPaymentId]);
 
   const steps = useMemo(
     () => [t("stepProfile"), t("stepDealer"), t("stepPackage"), t("stepPayment")],

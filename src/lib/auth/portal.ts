@@ -91,6 +91,24 @@ export async function getPortalContext(): Promise<PortalContext | null> {
     };
   }
 
+  const { data: dealerRow } = await supabase
+    .from("dealers")
+    .select("is_active")
+    .eq("id", staff.dealer_id)
+    .maybeSingle();
+
+  if (!dealerRow?.is_active) {
+    return {
+      userId: user.id,
+      email,
+      appUser,
+      surface: "none",
+      portalRole: null,
+      dealerId: null,
+      staff: null,
+    };
+  }
+
   const portalRole: "dealer_manager" | "dealer_staff" =
     staff.role === "manager" ? "dealer_manager" : "dealer_staff";
 

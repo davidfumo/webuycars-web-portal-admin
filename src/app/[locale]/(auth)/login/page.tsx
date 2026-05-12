@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { dealerNeedsOnboarding, getPortalContext } from "@/lib/auth/portal";
 import { SignOutButton } from "@/modules/shared/components/sign-out-button";
 import { LoginForm } from "@/modules/auth/components/login-form";
+import { AuthHashErrorFeedback } from "@/modules/auth/components/auth-hash-error-feedback";
+import { AuthSessionFromUrl } from "@/modules/auth/components/auth-session-from-url";
 import { LanguageSwitcher } from "@/modules/shared/components/language-switcher";
 import { ThemeToggle } from "@/modules/shared/components/theme-toggle";
 
@@ -76,13 +78,18 @@ export default async function LoginPage({
         <p className="relative z-10 text-xs text-white/45">{tAuth("loginSecureHint")}</p>
       </aside>
 
-      <section className="relative flex flex-col bg-auth-canvas dark:bg-auth-canvas-dark">
+      <section
+        className="relative flex flex-col bg-auth-canvas dark:bg-auth-canvas-dark"
+        suppressHydrationWarning
+      >
         <div className="absolute right-4 top-4 z-10 flex items-center gap-1 rounded-full border border-border/60 bg-card/80 px-1 py-1 shadow-sm backdrop-blur-sm dark:bg-card/60">
           <LanguageSwitcher />
           <ThemeToggle />
         </div>
 
         <div className="flex flex-1 flex-col items-center justify-center px-4 py-14 sm:px-8">
+          <AuthHashErrorFeedback />
+          <AuthSessionFromUrl />
           {showNoPortalBanner ? (
             <div
               role="alert"
@@ -110,6 +117,9 @@ export default async function LoginPage({
             </p>
           </div>
           <LoginForm />
+          <p className="mt-6 max-w-md text-center text-xs leading-relaxed text-muted-foreground">
+            {tAuth("inviteCompletionHint")}
+          </p>
         </div>
       </section>
     </div>

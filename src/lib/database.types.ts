@@ -33,7 +33,7 @@ export type SubscriptionStatus =
   | "expired"
   | "suspended";
 
-export type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
+export type PaymentStatus = "pending" | "paid" | "failed" | "refunded" | "cancelled";
 
 export type PaymentMethod = "mpesa" | "emola" | "card";
 

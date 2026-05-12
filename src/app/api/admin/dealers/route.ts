@@ -13,7 +13,24 @@ const createDealerSchema = z.object({
   packageId: z.string().uuid(),
   managerEmail: z.string().email(),
   logoUrl: z.string().url().optional().nullable(),
+  /** Locale segment for the manager’s first login redirect (e.g. `/en/login`). */
+  portalLocale: z.enum(["pt", "en"]).optional(),
 });
+
+const managerMeta = { role: "dealer_manager" } as const;
+
+function isEmailAlreadyRegisteredError(err: { message?: string; code?: string } | null): boolean {
+  if (!err) return false;
+  const m = (err.message ?? "").toLowerCase();
+  const c = err.code ?? "";
+  return (
+    c === "email_exists" ||
+    m.includes("already been registered") ||
+    m.includes("already registered") ||
+    m.includes("user already exists") ||
+    m.includes("duplicate")
+  );
+}
 
 export async function POST(request: Request) {
   try {
@@ -57,24 +74,44 @@ export async function POST(request: Request) {
 
     const body = parsed.data;
 
-    const tempPassword = `Wbc-${crypto.randomUUID()}`;
+    const origin = new URL(request.url).origin;
+    const loc = body.portalLocale ?? "pt";
+    const redirectTo = `${origin}/${loc}/login`;
 
-    const { data: createdUser, error: createError } =
-      await service.auth.admin.createUser({
+    const invited = await service.auth.admin.inviteUserByEmail(body.managerEmail, {
+      data: { ...managerMeta },
+      redirectTo,
+    });
+
+    let managerId: string;
+    let inviteEmailSent = true;
+    let managerSetupLink: string | null = null;
+
+    if (!invited.error && invited.data.user) {
+      managerId = invited.data.user.id;
+    } else if (isEmailAlreadyRegisteredError(invited.error)) {
+      return NextResponse.json({ error: "manager_email_exists" }, { status: 400 });
+    } else {
+      const generated = await service.auth.admin.generateLink({
+        type: "invite",
         email: body.managerEmail,
-        password: tempPassword,
-        email_confirm: true,
-        user_metadata: { role: "dealer_manager" },
+        options: {
+          data: { ...managerMeta },
+          redirectTo,
+        },
       });
 
-    if (createError || !createdUser.user) {
-      return NextResponse.json({ error: "auth_user_create_failed" }, { status: 400 });
+      if (generated.error || !generated.data.user || !generated.data.properties) {
+        return NextResponse.json({ error: "auth_user_create_failed" }, { status: 400 });
+      }
+
+      managerId = generated.data.user.id;
+      managerSetupLink = generated.data.properties.action_link;
+      inviteEmailSent = false;
     }
 
-    const managerId = createdUser.user.id;
-
     await service.auth.admin.updateUserById(managerId, {
-      user_metadata: { role: "dealer_manager" },
+      user_metadata: { ...managerMeta },
     });
 
     const baseSlug = slugify(body.businessName);
@@ -131,10 +168,45 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "staff_insert_failed" }, { status: 400 });
     }
 
+    const { data: pkgRow, error: pkgErr } = await service
+      .from("dealer_packages")
+      .select("price")
+      .eq("id", body.packageId)
+      .maybeSingle();
+
+    if (pkgErr || pkgRow == null) {
+      await service.from("dealer_staff").delete().eq("dealer_id", dealer.id);
+      await service.from("dealer_subscriptions").delete().eq("id", subscription.id);
+      await service.from("dealers").delete().eq("id", dealer.id);
+      await service.auth.admin.deleteUser(managerId);
+      return NextResponse.json({ error: "package_lookup_failed" }, { status: 400 });
+    }
+
+    const { error: payErr } = await service.from("payments").insert({
+      user_id: managerId,
+      dealer_id: dealer.id,
+      subscription_id: subscription.id,
+      amount: pkgRow.price,
+      currency: "MZN",
+      payment_status: "pending",
+      payment_type: "subscription",
+      payment_method: null,
+    });
+
+    if (payErr) {
+      await service.from("dealer_staff").delete().eq("dealer_id", dealer.id);
+      await service.from("dealer_subscriptions").delete().eq("id", subscription.id);
+      await service.from("dealers").delete().eq("id", dealer.id);
+      await service.auth.admin.deleteUser(managerId);
+      return NextResponse.json({ error: "payment_insert_failed" }, { status: 400 });
+    }
+
     return NextResponse.json({
       dealerId: dealer.id,
       subscriptionId: subscription.id,
       managerUserId: managerId,
+      inviteEmailSent,
+      managerSetupLink,
     });
   } catch {
     return NextResponse.json({ error: "server_error" }, { status: 500 });

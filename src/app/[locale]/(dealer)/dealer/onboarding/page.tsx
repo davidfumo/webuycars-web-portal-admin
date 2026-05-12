@@ -26,7 +26,7 @@ export default async function DealerOnboardingPage({
 
   const supabase = await createServerSupabaseClient();
 
-  const [{ data: dealer }, { data: sub }, { data: profile }] = await Promise.all([
+  const [{ data: dealer }, { data: sub }, { data: profile }, { data: pendingPay }] = await Promise.all([
     supabase.from("dealers").select("*").eq("id", ctx.dealerId).single(),
     supabase
       .from("dealer_subscriptions")
@@ -36,6 +36,15 @@ export default async function DealerOnboardingPage({
       .limit(1)
       .maybeSingle(),
     supabase.from("profiles").select("full_name").eq("user_id", ctx.userId).maybeSingle(),
+    supabase
+      .from("payments")
+      .select("id")
+      .eq("dealer_id", ctx.dealerId)
+      .eq("payment_type", "subscription")
+      .eq("payment_status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   if (!dealer || !sub?.package_id) {
@@ -57,6 +66,7 @@ export default async function DealerOnboardingPage({
       dealer={dealer}
       pkg={pkg}
       initialFullName={profile?.full_name ?? null}
+      initialPendingPaymentId={pendingPay?.id ?? null}
     />
   );
 }
