@@ -433,7 +433,11 @@
     "method_card": "Card",
     "simulatePay": "Simulate payment (for testing)",
     "generatePayment": "Generate payment intent",
-    "completeSimulated": "Complete simulated payment"
+    "completeSimulated": "Complete simulated payment",
+    "pendingTitle": "Subscription payment pending",
+    "pendingBody": "Your subscription to {package} is awaiting payment of {price} {currency}. Choose a method to complete it.",
+    "errorNotFound": "Payment record not found or already processed. Refresh the page and try again.",
+    "noPayments": "No payment records yet."
   },
   "Subscription": {
     "status_pending_payment": "Pending payment",

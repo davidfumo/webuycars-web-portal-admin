@@ -1,13 +1,13 @@
 import { getTranslations } from "next-intl/server";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceSupabaseClient } from "@/lib/supabase/admin";
 import { getPortalContext } from "@/lib/auth/portal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PayPendingSubscription } from "@/modules/dealer/components/pay-pending-subscription";
 
 export const dynamic = "force-dynamic";
 
 export default async function DealerDashboardPage() {
-  const supabase = await createServerSupabaseClient();
   const ctx = await getPortalContext();
   const t = await getTranslations("Dealer");
   const tSub = await getTranslations("Subscription");
@@ -16,28 +16,43 @@ export default async function DealerDashboardPage() {
   if (!ctx || ctx.surface !== "dealer") return null;
 
   const dealerId = ctx.dealerId;
+  const service = createServiceSupabaseClient();
 
   const [{ data: sub }, listingsCounts, listingIds] = await Promise.all([
-    supabase
+    service
       .from("dealer_subscriptions")
       .select("id,status,expires_at,listings_used,package_id")
       .eq("dealer_id", dealerId)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
-    supabase.from("vehicle_listings").select("status").eq("dealer_id", dealerId).limit(5000),
-    supabase.from("vehicle_listings").select("id").eq("dealer_id", dealerId).limit(2000),
+    service.from("vehicle_listings").select("status").eq("dealer_id", dealerId).limit(5000),
+    service.from("vehicle_listings").select("id").eq("dealer_id", dealerId).limit(2000),
   ]);
 
   const ids = (listingIds.data ?? []).map((l) => l.id);
   const leads =
     ids.length > 0
-      ? await supabase.from("leads").select("id", { count: "exact", head: true }).in("listing_id", ids)
+      ? await service.from("leads").select("id", { count: "exact", head: true }).in("listing_id", ids)
       : { count: 0 };
 
   const { data: pkg } = sub?.package_id
-    ? await supabase.from("dealer_packages").select("*").eq("id", sub.package_id).maybeSingle()
+    ? await service.from("dealer_packages").select("*").eq("id", sub.package_id).maybeSingle()
     : { data: null };
+
+  // Pending subscription payment (if admin pre-provisioned it)
+  const { data: pendingPayment } =
+    sub && sub.status === "pending_payment"
+      ? await service
+          .from("payments")
+          .select("id")
+          .eq("subscription_id", sub.id)
+          .eq("payment_type", "subscription")
+          .eq("payment_status", "pending")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : { data: null };
 
   const byStatus = new Map<string, number>();
   for (const row of listingsCounts.data ?? []) {
@@ -47,15 +62,26 @@ export default async function DealerDashboardPage() {
   const used = sub?.listings_used ?? 0;
   const limit = pkg?.listing_limit ?? 0;
   const remaining = Math.max(0, limit - used);
+  const isManager = ctx.portalRole === "dealer_manager";
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">{t("dashboardTitle")}</h1>
-        <p className="text-sm text-muted-foreground">
-          {ctx.portalRole === "dealer_staff" ? t("managerOnlyPayments") : null}
-        </p>
+        {!isManager && (
+          <p className="text-sm text-muted-foreground">{t("managerOnlyPayments")}</p>
+        )}
       </div>
+
+      {/* Pending payment banner */}
+      {sub?.status === "pending_payment" && pkg && isManager && (
+        <PayPendingSubscription
+          dealerId={dealerId}
+          existingPaymentId={pendingPayment?.id ?? null}
+          packageName={pkg.name}
+          packagePrice={Number(pkg.price)}
+        />
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card>

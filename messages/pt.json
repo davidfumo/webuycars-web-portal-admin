@@ -433,7 +433,11 @@
     "method_card": "Cartão",
     "simulatePay": "Simular pagamento (para testes)",
     "generatePayment": "Gerar intenção de pagamento",
-    "completeSimulated": "Concluir pagamento simulado"
+    "completeSimulated": "Concluir pagamento simulado",
+    "pendingTitle": "Pagamento de subscrição pendente",
+    "pendingBody": "A sua subscrição do pacote {package} aguarda pagamento de {price} {currency}. Escolha um método para concluir.",
+    "errorNotFound": "Registo de pagamento não encontrado ou já processado. Recarregue a página e tente novamente.",
+    "noPayments": "Ainda não existem registos de pagamento."
   },
   "Subscription": {
     "status_pending_payment": "Pagamento pendente",

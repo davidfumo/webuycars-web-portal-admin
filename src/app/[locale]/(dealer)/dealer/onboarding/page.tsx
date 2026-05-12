@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceSupabaseClient } from "@/lib/supabase/admin";
 import {
   dealerNeedsOnboarding,
   getPortalContext,
@@ -24,19 +24,19 @@ export default async function DealerOnboardingPage({
     redirect(`/${locale}/dealer/dashboard`);
   }
 
-  const supabase = await createServerSupabaseClient();
+  const service = createServiceSupabaseClient();
 
   const [{ data: dealer }, { data: sub }, { data: profile }, { data: pendingPay }] = await Promise.all([
-    supabase.from("dealers").select("*").eq("id", ctx.dealerId).single(),
-    supabase
+    service.from("dealers").select("*").eq("id", ctx.dealerId).single(),
+    service
       .from("dealer_subscriptions")
       .select("package_id")
       .eq("dealer_id", ctx.dealerId)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
-    supabase.from("profiles").select("full_name").eq("user_id", ctx.userId).maybeSingle(),
-    supabase
+    service.from("profiles").select("full_name").eq("user_id", ctx.userId).maybeSingle(),
+    service
       .from("payments")
       .select("id")
       .eq("dealer_id", ctx.dealerId)
@@ -51,7 +51,7 @@ export default async function DealerOnboardingPage({
     redirect(`/${locale}/dealer/dashboard`);
   }
 
-  const { data: pkg } = await supabase
+  const { data: pkg } = await service
     .from("dealer_packages")
     .select("*")
     .eq("id", sub.package_id)

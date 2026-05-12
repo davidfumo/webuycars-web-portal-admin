@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceSupabaseClient } from "@/lib/supabase/admin";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -49,7 +49,7 @@ export default async function AdminPaymentsPage({
   const statusParam = isStatusFilter(sp.status) ? sp.status : "all";
   const typeParam = isTypeFilter(sp.type) ? sp.type : "all";
 
-  const supabase = await createServerSupabaseClient();
+  const supabase = createServiceSupabaseClient();
   const t = await getTranslations("Admin");
   const tCommon = await getTranslations("Common");
   const tPay = await getTranslations("Payment");
@@ -76,10 +76,7 @@ export default async function AdminPaymentsPage({
   ];
   let dealerNames: Record<string, string> = {};
   if (dealerIds.length > 0) {
-    const { data: dealers } = await supabase
-      .from("dealers")
-      .select("id,business_name")
-      .in("id", dealerIds);
+    const { data: dealers } = await supabase.from("dealers").select("id,business_name").in("id", dealerIds);
     dealerNames = Object.fromEntries(
       (dealers ?? []).map((d) => [d.id, d.business_name ?? "—"]),
     );

@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceSupabaseClient } from "@/lib/supabase/admin";
 import { getPortalContext } from "@/lib/auth/portal";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 export const dynamic = "force-dynamic";
 
 export default async function DealerPaymentsPage() {
-  const supabase = await createServerSupabaseClient();
   const ctx = await getPortalContext();
   const t = await getTranslations("Dealer");
   const tPay = await getTranslations("Payment");
@@ -15,7 +14,9 @@ export default async function DealerPaymentsPage() {
 
   if (!ctx || ctx.surface !== "dealer") return null;
 
-  const { data: rows } = await supabase
+  const service = createServiceSupabaseClient();
+
+  const { data: rows } = await service
     .from("payments")
     .select("id,amount,currency,payment_status,payment_type,payment_method,created_at")
     .eq("dealer_id", ctx.dealerId)
@@ -36,10 +37,18 @@ export default async function DealerPaymentsPage() {
                 <th className="px-4 py-3">{tCommon("status")}</th>
                 <th className="px-4 py-3">Type</th>
                 <th className="px-4 py-3">{tCommon("currency")}</th>
+                <th className="px-4 py-3">Method</th>
                 <th className="px-4 py-3">{tCommon("updatedAt")}</th>
               </tr>
             </thead>
             <tbody>
+              {(rows ?? []).length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                    {tPay("noPayments")}
+                  </td>
+                </tr>
+              ) : null}
               {(rows ?? []).map((p) => (
                 <tr key={p.id} className="border-t border-border">
                   <td className="px-4 py-3">
@@ -51,6 +60,7 @@ export default async function DealerPaymentsPage() {
                   <td className="px-4 py-3">
                     {Number(p.amount).toLocaleString()} {p.currency}
                   </td>
+                  <td className="px-4 py-3">{p.payment_method ?? "—"}</td>
                   <td className="px-4 py-3">{new Date(p.created_at).toLocaleString()}</td>
                 </tr>
               ))}

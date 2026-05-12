@@ -1,13 +1,13 @@
 import { getTranslations } from "next-intl/server";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceSupabaseClient } from "@/lib/supabase/admin";
 import { getPortalContext } from "@/lib/auth/portal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PayPendingSubscription } from "@/modules/dealer/components/pay-pending-subscription";
 
 export const dynamic = "force-dynamic";
 
 export default async function DealerSubscriptionPage() {
-  const supabase = await createServerSupabaseClient();
   const ctx = await getPortalContext();
   const t = await getTranslations("Dealer");
   const tNav = await getTranslations("Nav");
@@ -16,29 +16,57 @@ export default async function DealerSubscriptionPage() {
 
   if (!ctx || ctx.surface !== "dealer") return null;
 
+  const service = createServiceSupabaseClient();
+
   const [{ data: sub }, { data: packages }] = await Promise.all([
-    supabase
+    service
       .from("dealer_subscriptions")
       .select("*")
       .eq("dealer_id", ctx.dealerId)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
-    supabase.from("dealer_packages").select("*").eq("is_active", true).order("price"),
+    service.from("dealer_packages").select("*").eq("is_active", true).order("price"),
   ]);
 
   const current = sub?.package_id
     ? packages?.find((p) => p.id === sub.package_id)
     : null;
 
+  // Check for a pending subscription payment (may have been admin-provisioned)
+  const { data: pendingPayment } =
+    sub && sub.status === "pending_payment"
+      ? await service
+          .from("payments")
+          .select("id")
+          .eq("subscription_id", sub.id)
+          .eq("payment_type", "subscription")
+          .eq("payment_status", "pending")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : { data: null };
+
+  const isManager = ctx.portalRole === "dealer_manager";
+
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">{tNav("dealerSubscription")}</h1>
-        <p className="text-sm text-muted-foreground">
-          {ctx.portalRole === "dealer_staff" ? t("managerOnlyPayments") : null}
-        </p>
+        {!isManager && (
+          <p className="text-sm text-muted-foreground">{t("managerOnlyPayments")}</p>
+        )}
       </div>
+
+      {/* Pending payment CTA — only managers can pay */}
+      {sub?.status === "pending_payment" && current && isManager && (
+        <PayPendingSubscription
+          dealerId={ctx.dealerId}
+          existingPaymentId={pendingPayment?.id ?? null}
+          packageName={current.name}
+          packagePrice={Number(current.price)}
+        />
+      )}
 
       <Card>
         <CardHeader>

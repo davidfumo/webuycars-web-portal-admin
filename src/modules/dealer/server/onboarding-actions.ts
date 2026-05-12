@@ -2,32 +2,43 @@
 
 import { revalidatePath } from "next/cache";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceSupabaseClient } from "@/lib/supabase/admin";
 import type { PaymentMethod } from "@/lib/database.types";
 
-export async function saveOnboardingProfile(input: { fullName: string }) {
+/**
+ * Returns the verified user ID, or throws "unauthorized".
+ * Always validates against the Supabase auth server (no JWT forgery possible).
+ */
+async function getVerifiedUserId(): Promise<string> {
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("unauthorized");
+  return user.id;
+}
 
-  const { data: existing } = await supabase
+export async function saveOnboardingProfile(input: { fullName: string }) {
+  const userId = await getVerifiedUserId();
+  const service = createServiceSupabaseClient();
+
+  const { data: existing } = await service
     .from("profiles")
     .select("id")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .maybeSingle();
 
   if (!existing) {
-    const { error } = await supabase.from("profiles").insert({
-      user_id: user.id,
+    const { error } = await service.from("profiles").insert({
+      user_id: userId,
       full_name: input.fullName,
     });
     if (error) throw error;
   } else {
-    const { error } = await supabase
+    const { error } = await service
       .from("profiles")
       .update({ full_name: input.fullName })
-      .eq("user_id", user.id);
+      .eq("user_id", userId);
     if (error) throw error;
   }
 
@@ -39,14 +50,29 @@ export async function saveOnboardingDealer(input: {
   businessName: string;
   address?: string;
 }) {
-  const supabase = await createServerSupabaseClient();
-  const { error } = await supabase
+  const userId = await getVerifiedUserId();
+  const service = createServiceSupabaseClient();
+
+  // Verify the user is an active manager for this dealer
+  const { data: staff } = await service
+    .from("dealer_staff")
+    .select("id")
+    .eq("dealer_id", input.dealerId)
+    .eq("user_id", userId)
+    .eq("role", "manager")
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (!staff) throw new Error("forbidden");
+
+  const { error } = await service
     .from("dealers")
     .update({
       business_name: input.businessName,
       address: input.address ?? null,
     })
     .eq("id", input.dealerId);
+
   if (error) throw error;
   revalidatePath("/dealer/onboarding");
 }
@@ -55,13 +81,22 @@ export async function createSubscriptionCheckoutPayment(input: {
   dealerId: string;
   method: PaymentMethod;
 }) {
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("unauthorized");
+  const userId = await getVerifiedUserId();
+  const service = createServiceSupabaseClient();
 
-  const { data: sub } = await supabase
+  // Verify the user is an active manager for this dealer
+  const { data: staff } = await service
+    .from("dealer_staff")
+    .select("id")
+    .eq("dealer_id", input.dealerId)
+    .eq("user_id", userId)
+    .eq("role", "manager")
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (!staff) throw new Error("forbidden");
+
+  const { data: sub } = await service
     .from("dealer_subscriptions")
     .select("id, package_id, dealer_id")
     .eq("dealer_id", input.dealerId)
@@ -71,7 +106,7 @@ export async function createSubscriptionCheckoutPayment(input: {
 
   if (!sub) throw new Error("missing_subscription");
 
-  const { data: pkg } = await supabase
+  const { data: pkg } = await service
     .from("dealer_packages")
     .select("price")
     .eq("id", sub.package_id)
@@ -79,7 +114,8 @@ export async function createSubscriptionCheckoutPayment(input: {
 
   if (!pkg) throw new Error("missing_package");
 
-  const { data: existing } = await supabase
+  // Re-use any pre-existing pending payment (admin may have already created one)
+  const { data: existing } = await service
     .from("payments")
     .select("id")
     .eq("subscription_id", sub.id)
@@ -88,21 +124,17 @@ export async function createSubscriptionCheckoutPayment(input: {
     .maybeSingle();
 
   if (existing?.id) {
-    const { error: upErr } = await supabase
+    await service
       .from("payments")
-      .update({
-        amount: pkg.price,
-        payment_method: input.method,
-      })
+      .update({ amount: pkg.price, payment_method: input.method })
       .eq("id", existing.id);
-    if (upErr) throw upErr;
     return { paymentId: existing.id };
   }
 
-  const { data: payment, error } = await supabase
+  const { data: payment, error } = await service
     .from("payments")
     .insert({
-      user_id: user.id,
+      user_id: userId,
       dealer_id: sub.dealer_id,
       subscription_id: sub.id,
       amount: pkg.price,
@@ -115,38 +147,55 @@ export async function createSubscriptionCheckoutPayment(input: {
     .single();
 
   if (error || !payment) throw error ?? new Error("payment_insert_failed");
-
   return { paymentId: payment.id };
 }
 
 export async function completeOnboardingPayment(paymentId: string) {
+  await completeSubscriptionPayment({ paymentId, markOnboardingDone: true });
+}
+
+/**
+ * Completes a pending subscription payment simulation.
+ * Works whether called from the onboarding wizard or from the subscription page
+ * after onboarding is already done (or was bypassed).
+ */
+export async function completeSubscriptionPayment(input: {
+  paymentId: string;
+  dealerId?: string;
+  markOnboardingDone?: boolean;
+}) {
+  const userId = await getVerifiedUserId();
+  // The RPC uses auth.uid() from the DB session, so we still call via the user's client.
   const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("unauthorized");
 
   const { error: rpcError } = await supabase.rpc(
     "complete_subscription_payment_simulation",
-    { p_payment_id: paymentId },
+    { p_payment_id: input.paymentId },
   );
   if (rpcError) throw rpcError;
 
-  const { data: staff } = await supabase
-    .from("dealer_staff")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("role", "manager")
-    .maybeSingle();
-
-  if (staff) {
-    await supabase
+  if (input.markOnboardingDone !== false) {
+    const service = createServiceSupabaseClient();
+    const filter = service
       .from("dealer_staff")
-      .update({
-        onboarding_completed_at: new Date().toISOString(),
-        onboarding_required: false,
-      })
-      .eq("id", staff.id);
+      .select("id")
+      .eq("user_id", userId)
+      .eq("role", "manager")
+      .eq("is_active", true);
+
+    const { data: staffRow } = await (
+      input.dealerId ? filter.eq("dealer_id", input.dealerId) : filter
+    ).maybeSingle();
+
+    if (staffRow) {
+      await service
+        .from("dealer_staff")
+        .update({
+          onboarding_completed_at: new Date().toISOString(),
+          onboarding_required: false,
+        })
+        .eq("id", staffRow.id);
+    }
   }
 
   revalidatePath("/dealer");
