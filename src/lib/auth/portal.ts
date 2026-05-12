@@ -1,5 +1,9 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/database.types";
+import {
+  readPortalPendingFromUser,
+  syncPortalMembershipForUser,
+} from "@/lib/auth/sync-portal-membership-server";
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
 type StaffRow = Database["public"]["Tables"]["dealer_staff"]["Row"];
@@ -48,6 +52,16 @@ export async function getPortalContext(): Promise<PortalContext | null> {
   } = await supabase.auth.getUser();
 
   if (!user) return null;
+
+  /**
+   * Auto-heal: invited users always have `portal_pending_dealer_id` stamped on Auth
+   * `app_metadata`. If a previous DB step failed or the row was lost, this one call
+   * restores `dealer_staff` + `public.users.role` so portal access never appears
+   * orphaned. Safe to run on every render — idempotent and noop when no pending.
+   */
+  if (readPortalPendingFromUser(user)) {
+    await syncPortalMembershipForUser(user);
+  }
 
   const { data: appUser, error } = await supabase
     .from("users")

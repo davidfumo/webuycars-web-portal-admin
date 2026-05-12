@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { AuthHashErrorFeedback } from "@/modules/auth/components/auth-hash-error-feedback";
 import { AuthSessionFromUrl } from "@/modules/auth/components/auth-session-from-url";
-import { SignOutButton } from "@/modules/shared/components/sign-out-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,8 +19,7 @@ type Phase =
   | "form"
   | "no_link"
   | "token_stuck"
-  | "submitting"
-  | "no_portal_help";
+  | "submitting";
 
 function urlHadAuthTokens(): boolean {
   if (typeof window === "undefined") return false;
@@ -29,43 +27,17 @@ function urlHadAuthTokens(): boolean {
   return u.searchParams.has("code") || u.hash.includes("access_token");
 }
 
-type Props = {
-  /** From `?reason=no-portal` when redirected from home (session but no dealer/admin access). */
-  initialReason?: string;
-};
-
-async function requestPortalMembershipSync(): Promise<boolean> {
-  try {
-    const res = await fetch("/api/auth/sync-portal-membership", {
-      method: "POST",
-      credentials: "same-origin",
-    });
-    if (!res.ok) return false;
-    const body = (await res.json()) as { synced?: boolean };
-    return Boolean(body.synced);
-  } catch {
-    return false;
-  }
-}
-
-export function CompleteInviteClient({ initialReason }: Props) {
+export function CompleteInviteClient() {
   const t = useTranslations("Auth");
   const tCommon = useTranslations("Common");
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("loading");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [sessionEmail, setSessionEmail] = useState<string | null>(null);
-  const [noPortalSyncing, setNoPortalSyncing] = useState(false);
   const hadTokensRef = useRef(false);
-  const syncTriedRef = useRef(false);
-  const isNoPortalReturn = initialReason === "no-portal";
 
   useEffect(() => {
     hadTokensRef.current = urlHadAuthTokens();
-    void createBrowserSupabaseClient()
-      .auth.getSession()
-      .then(({ data }) => setSessionEmail(data.session?.user.email ?? null));
   }, []);
 
   useEffect(() => {
@@ -75,23 +47,7 @@ export function CompleteInviteClient({ initialReason }: Props) {
     function resolveWithSession(session: Session | null) {
       if (cancelled) return;
       if (session) {
-        if (isNoPortalReturn && !hadTokensRef.current) {
-          if (syncTriedRef.current) return;
-          syncTriedRef.current = true;
-          void (async () => {
-            const synced = await requestPortalMembershipSync();
-            if (cancelled) return;
-            if (synced) {
-              router.replace("/");
-              router.refresh();
-              return;
-            }
-            setPhase("no_portal_help");
-          })();
-          return;
-        }
         setPhase("form");
-        return;
       }
     }
 
@@ -122,7 +78,7 @@ export function CompleteInviteClient({ initialReason }: Props) {
       sub.subscription.unsubscribe();
       window.clearTimeout(tSlow);
     };
-  }, [isNoPortalReturn, router]);
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -142,8 +98,12 @@ export function CompleteInviteClient({ initialReason }: Props) {
       setPhase("form");
       return;
     }
-    await requestPortalMembershipSync();
     toast.success(t("completeInviteSuccess"));
+    /**
+     * Server-side `getPortalContext()` auto-syncs from Auth `app_metadata`, then home
+     * routes the user to admin / dealer dashboard / onboarding (or to /no-portal-access
+     * as a terminal state). No client round-trip needed.
+     */
     router.replace("/");
     router.refresh();
   }
@@ -159,52 +119,6 @@ export function CompleteInviteClient({ initialReason }: Props) {
             <CardTitle className="text-lg">{t("completeInviteLoadingTitle")}</CardTitle>
             <CardDescription>{t("completeInviteLoadingBody")}</CardDescription>
           </CardHeader>
-        </Card>
-      ) : null}
-
-      {phase === "no_portal_help" ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">{t("completeInviteNoPortalHelpTitle")}</CardTitle>
-            <CardDescription className="space-y-3">
-              <span className="block">{t("completeInviteNoPortalHelpBody")}</span>
-              {sessionEmail ? (
-                <span className="block font-mono text-xs text-muted-foreground">
-                  {t("completeInviteNoPortalSignedInAs", { email: sessionEmail })}
-                </span>
-              ) : null}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-            <p className="text-xs text-muted-foreground">{t("completeInviteNoPortalHelpHint")}</p>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={noPortalSyncing}
-                onClick={() => {
-                  void (async () => {
-                    setNoPortalSyncing(true);
-                    try {
-                      const synced = await requestPortalMembershipSync();
-                      if (synced) {
-                        window.history.replaceState(null, "", window.location.pathname);
-                        router.replace("/");
-                        router.refresh();
-                        return;
-                      }
-                      toast.error(tCommon("error"));
-                    } finally {
-                      setNoPortalSyncing(false);
-                    }
-                  })();
-                }}
-              >
-                {t("completeInviteNoPortalRetry")}
-              </Button>
-              <SignOutButton />
-            </div>
-          </CardContent>
         </Card>
       ) : null}
 
