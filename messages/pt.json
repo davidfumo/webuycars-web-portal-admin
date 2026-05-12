@@ -74,7 +74,10 @@
     "completeInviteNoLinkBody": "Abra o link completo do e-mail (ou cole o link único que lhe deram). Se já tem palavra-passe, use a página normal de início de sessão.",
     "completeInviteGoLogin": "Ir para início de sessão",
     "completeInviteStuckTitle": "Não foi possível concluir o acesso",
-    "completeInviteStuckBody": "O link pode ter expirado, já ter sido usado ou estar bloqueado pelo navegador. Peça um novo link ao administrador e tente numa janela nova ou em modo privado."
+    "completeInviteStuckBody": "O link pode ter expirado, já ter sido usado ou estar bloqueado pelo navegador. Peça um novo link ao administrador e tente numa janela nova ou em modo privado.",
+    "completeInviteNoPortalHelpTitle": "Esta conta ainda não está ligada à consola",
+    "completeInviteNoPortalHelpBody": "Está com sessão iniciada, mas este e-mail não está associado a administrador nem à equipa de um stand. Definir palavra-passe aqui não resolve isso sozinho.",
+    "completeInviteNoPortalHelpHint": "Peça ao administrador para o adicionar em «Equipa do portal» (stand) ou para o convidar como administrador. Se abriu a conta errada, saia e volte a usar o link do convite."
   },
   "Nav": {
     "adminDashboard": "Painel",

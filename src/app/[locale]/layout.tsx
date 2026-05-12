@@ -4,6 +4,7 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import { AppProviders } from "@/providers/app-providers";
 import { DocumentLang } from "@/providers/document-lang";
+import { RootInviteFragmentRedirect } from "@/modules/auth/components/root-invite-fragment-redirect";
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -23,6 +24,7 @@ export default async function LocaleLayout({
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
       <AppProviders>
+        <RootInviteFragmentRedirect locale={locale} />
         <DocumentLang />
         {children}
       </AppProviders>

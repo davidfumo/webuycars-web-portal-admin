@@ -1,19 +1,27 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { toast } from "sonner";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { AuthHashErrorFeedback } from "@/modules/auth/components/auth-hash-error-feedback";
 import { AuthSessionFromUrl } from "@/modules/auth/components/auth-session-from-url";
+import { SignOutButton } from "@/modules/shared/components/sign-out-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingButton } from "@/components/ui/loading-button";
 
-type Phase = "loading" | "form" | "no_link" | "token_stuck" | "submitting";
+type Phase =
+  | "loading"
+  | "form"
+  | "no_link"
+  | "token_stuck"
+  | "submitting"
+  | "no_portal_help";
 
 function urlHadAuthTokens(): boolean {
   if (typeof window === "undefined") return false;
@@ -21,7 +29,12 @@ function urlHadAuthTokens(): boolean {
   return u.searchParams.has("code") || u.hash.includes("access_token");
 }
 
-export function CompleteInviteClient() {
+type Props = {
+  /** From `?reason=no-portal` when redirected from home (session but no dealer/admin access). */
+  initialReason?: string;
+};
+
+export function CompleteInviteClient({ initialReason }: Props) {
   const t = useTranslations("Auth");
   const tCommon = useTranslations("Common");
   const router = useRouter();
@@ -29,6 +42,7 @@ export function CompleteInviteClient() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const hadTokensRef = useRef(false);
+  const isNoPortalReturn = initialReason === "no-portal";
 
   useEffect(() => {
     hadTokensRef.current = urlHadAuthTokens();
@@ -38,15 +52,22 @@ export function CompleteInviteClient() {
     const supabase = createBrowserSupabaseClient();
     let cancelled = false;
 
-    function goFormIfSession(session: unknown) {
+    function resolveWithSession(session: Session | null) {
       if (cancelled) return;
-      if (session) setPhase("form");
+      if (session) {
+        if (isNoPortalReturn && !hadTokensRef.current) {
+          setPhase("no_portal_help");
+          return;
+        }
+        setPhase("form");
+        return;
+      }
     }
 
-    void supabase.auth.getSession().then(({ data }) => goFormIfSession(data.session));
+    void supabase.auth.getSession().then(({ data }) => resolveWithSession(data.session));
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      goFormIfSession(session);
+      resolveWithSession(session);
     });
 
     const tSlow = window.setTimeout(() => {
@@ -54,7 +75,7 @@ export function CompleteInviteClient() {
       void supabase.auth.getSession().then(({ data }) => {
         if (cancelled) return;
         if (data.session) {
-          setPhase("form");
+          resolveWithSession(data.session);
           return;
         }
         if (!hadTokensRef.current) {
@@ -70,7 +91,7 @@ export function CompleteInviteClient() {
       sub.subscription.unsubscribe();
       window.clearTimeout(tSlow);
     };
-  }, []);
+  }, [isNoPortalReturn]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -106,6 +127,21 @@ export function CompleteInviteClient() {
             <CardTitle className="text-lg">{t("completeInviteLoadingTitle")}</CardTitle>
             <CardDescription>{t("completeInviteLoadingBody")}</CardDescription>
           </CardHeader>
+        </Card>
+      ) : null}
+
+      {phase === "no_portal_help" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">{t("completeInviteNoPortalHelpTitle")}</CardTitle>
+            <CardDescription className="space-y-3">
+              <span className="block">{t("completeInviteNoPortalHelpBody")}</span>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-muted-foreground">{t("completeInviteNoPortalHelpHint")}</p>
+            <SignOutButton />
+          </CardContent>
         </Card>
       ) : null}
 

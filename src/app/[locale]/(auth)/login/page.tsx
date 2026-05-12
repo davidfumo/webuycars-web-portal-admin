@@ -7,6 +7,7 @@ import { SignOutButton } from "@/modules/shared/components/sign-out-button";
 import { LoginForm } from "@/modules/auth/components/login-form";
 import { AuthHashErrorFeedback } from "@/modules/auth/components/auth-hash-error-feedback";
 import { AuthSessionFromUrl } from "@/modules/auth/components/auth-session-from-url";
+import { LoginInviteTokenRedirect } from "@/modules/auth/components/login-invite-token-redirect";
 import { LanguageSwitcher } from "@/modules/shared/components/language-switcher";
 import { ThemeToggle } from "@/modules/shared/components/theme-toggle";
 
@@ -88,6 +89,7 @@ export default async function LoginPage({
         </div>
 
         <div className="flex flex-1 flex-col items-center justify-center px-4 py-14 sm:px-8">
+          <LoginInviteTokenRedirect />
           <AuthHashErrorFeedback />
           <AuthSessionFromUrl />
           {showNoPortalBanner ? (

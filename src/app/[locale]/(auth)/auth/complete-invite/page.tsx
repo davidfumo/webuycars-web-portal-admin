@@ -16,14 +16,20 @@ export async function generateMetadata({
   return { title: t("completeInviteMetaTitle") };
 }
 
-export default function CompleteInvitePage() {
+export default async function CompleteInvitePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ reason?: string }>;
+}) {
+  const sp = searchParams ? await searchParams : {};
+
   return (
     <div className="relative min-h-dvh bg-auth-canvas dark:bg-auth-canvas-dark">
       <div className="absolute right-4 top-4 z-10 flex items-center gap-1 rounded-full border border-border/60 bg-card/80 px-1 py-1 shadow-sm backdrop-blur-sm dark:bg-card/60">
         <LanguageSwitcher />
         <ThemeToggle />
       </div>
-      <CompleteInviteClient />
+      <CompleteInviteClient initialReason={sp.reason} />
     </div>
   );
 }

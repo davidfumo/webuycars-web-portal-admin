@@ -74,7 +74,10 @@
     "completeInviteNoLinkBody": "Open the full link from your email (or paste the one-time link you were given). If you already have a password, use the normal sign-in page instead.",
     "completeInviteGoLogin": "Go to sign in",
     "completeInviteStuckTitle": "We could not finish signing you in",
-    "completeInviteStuckBody": "The link may be expired, already used, or blocked by the browser. Request a new access link from your administrator, then try again in a fresh window or private browsing mode."
+    "completeInviteStuckBody": "The link may be expired, already used, or blocked by the browser. Request a new access link from your administrator, then try again in a fresh window or private browsing mode.",
+    "completeInviteNoPortalHelpTitle": "This account is not linked to the console yet",
+    "completeInviteNoPortalHelpBody": "You are signed in, but this email is not attached as an administrator or dealer team member. Setting a password here will not fix that by itself.",
+    "completeInviteNoPortalHelpHint": "Ask your administrator to add you under Portal team (dealer) or to invite you as admin. If you opened the wrong account, sign out and use the invite link again."
   },
   "Nav": {
     "adminDashboard": "Dashboard",

@@ -29,5 +29,5 @@ export default async function HomePage({
     redirect(`/${locale}/dealer/dashboard`);
   }
 
-  redirect(`/${locale}/login?reason=noPortalAccess`);
+  redirect(`/${locale}/auth/complete-invite?reason=no-portal`);
 }
