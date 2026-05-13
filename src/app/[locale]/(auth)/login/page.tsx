@@ -3,6 +3,7 @@ import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { dealerNeedsOnboarding, getPortalContext } from "@/lib/auth/portal";
+import { syncPendingPaysuiteSubscriptionPaymentsForDealer } from "@/lib/payments/sync-paysuite-pending-subscription-for-dealer.server";
 import { SignOutButton } from "@/modules/shared/components/sign-out-button";
 import { LoginForm } from "@/modules/auth/components/login-form";
 import { AuthHashErrorFeedback } from "@/modules/auth/components/auth-hash-error-feedback";
@@ -37,7 +38,15 @@ export default async function LoginPage({
     redirect(`/${locale}/admin/dashboard`);
   }
   if (ctx?.surface === "dealer") {
-    if (dealerNeedsOnboarding(ctx.staff)) {
+    let effective = ctx;
+    if (ctx.portalRole === "dealer_manager") {
+      await syncPendingPaysuiteSubscriptionPaymentsForDealer(ctx.dealerId);
+      const refreshed = await getPortalContext();
+      if (refreshed?.surface === "dealer") {
+        effective = refreshed;
+      }
+    }
+    if (dealerNeedsOnboarding(effective.staff)) {
       redirect(`/${locale}/dealer/onboarding`);
     }
     redirect(`/${locale}/dealer/dashboard`);

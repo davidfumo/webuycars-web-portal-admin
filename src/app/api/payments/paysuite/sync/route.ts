@@ -4,6 +4,7 @@ import { createRouteHandlerSupabaseClient } from "@/lib/supabase/route-handler";
 import { createServiceSupabaseClient } from "@/lib/supabase/admin";
 import { getPaysuiteEnv } from "@/lib/paysuite/env";
 import { paysuiteGetPayment } from "@/lib/paysuite/client";
+import { isPaysuitePaymentRecordPaid } from "@/lib/paysuite/payment-status";
 import { applyPaysuiteSubscriptionPaid } from "@/lib/payments/apply-paysuite-subscription-paid";
 
 const bodySchema = z.object({
@@ -66,6 +67,13 @@ export async function POST(request: Request) {
   }
 
   if (pay.payment_status === "paid") {
+    await applyPaysuiteSubscriptionPaid(
+      service,
+      pay.id,
+      {
+        id: typeof pay.paysuite_payment_id === "string" ? pay.paysuite_payment_id : "",
+      } as Record<string, unknown>,
+    );
     return NextResponse.json({ status: "paid", applied: false });
   }
 
@@ -81,7 +89,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "paysuite_fetch_failed", message: msg }, { status: 502 });
   }
 
-  if (remote.status === "paid") {
+  if (isPaysuitePaymentRecordPaid(remote)) {
     await applyPaysuiteSubscriptionPaid(service, pay.id, remote as unknown as Record<string, unknown>);
     return NextResponse.json({ status: "paid", applied: true });
   }

@@ -5,6 +5,7 @@ import {
   dealerNeedsOnboarding,
   getPortalContext,
 } from "@/lib/auth/portal";
+import { syncPendingPaysuiteSubscriptionPaymentsForDealer } from "@/lib/payments/sync-paysuite-pending-subscription-for-dealer.server";
 import { OnboardingGuard } from "@/modules/shared/components/onboarding-guard";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +28,19 @@ export default async function DealerPortalLayout({
     redirect(`/${locale}/admin/dashboard`);
   }
 
-  const needsOnboarding = dealerNeedsOnboarding(ctx.staff);
+  /**
+   * PaySuite checkout runs on their site — our DB only updates when webhooks / return
+   * handlers / sync run. Re-fetch PaySuite for any pending subscription session **before**
+   * deciding onboarding, so a reload or deep link does not strand a paid customer.
+   */
+  let needsOnboarding = dealerNeedsOnboarding(ctx.staff);
+  if (ctx.portalRole === "dealer_manager") {
+    await syncPendingPaysuiteSubscriptionPaymentsForDealer(ctx.dealerId);
+    const refreshed = await getPortalContext();
+    if (refreshed?.surface === "dealer" && refreshed.staff) {
+      needsOnboarding = dealerNeedsOnboarding(refreshed.staff);
+    }
+  }
 
   return (
     <OnboardingGuard needsOnboarding={needsOnboarding}>

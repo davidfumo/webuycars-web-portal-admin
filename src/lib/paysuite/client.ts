@@ -15,6 +15,9 @@ export type PaysuitePaymentResponse = {
   amount: number;
   reference: string;
   status: string;
+  /** Some PaySuite responses use this instead of `status`. */
+  payment_status?: string;
+  state?: string;
   checkout_url?: string;
   transaction?: {
     id?: number | string;

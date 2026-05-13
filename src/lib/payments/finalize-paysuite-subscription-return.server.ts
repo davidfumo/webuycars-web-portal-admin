@@ -1,6 +1,7 @@
 import { createServiceSupabaseClient } from "@/lib/supabase/admin";
 import { getPaysuiteEnv } from "@/lib/paysuite/env";
 import { paysuiteGetPayment } from "@/lib/paysuite/client";
+import { isPaysuitePaymentRecordPaid } from "@/lib/paysuite/payment-status";
 import { applyPaysuiteSubscriptionPaid } from "@/lib/payments/apply-paysuite-subscription-paid";
 
 export type FinalizePaysuiteReturnOutcome =
@@ -69,7 +70,7 @@ export async function finalizePaysuiteSubscriptionReturn(input: {
 
   try {
     const remote = await paysuiteGetPayment(env, paysuiteId);
-    if (remote.status === "paid") {
+    if (isPaysuitePaymentRecordPaid(remote)) {
       await applyPaysuiteSubscriptionPaid(service, pay.id, remote as unknown as Record<string, unknown>);
       return { kind: "redirect_dashboard" };
     }

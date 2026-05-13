@@ -7,6 +7,7 @@ import { getPaysuiteEnv } from "@/lib/paysuite/env";
 import { paysuiteCreatePayment, paysuiteGetPayment } from "@/lib/paysuite/client";
 import { paysuiteReferenceForPayment } from "@/lib/paysuite/reference";
 import { toPaysuiteMethod } from "@/lib/paysuite/map-method";
+import { isPaysuitePaymentRecordPaid } from "@/lib/paysuite/payment-status";
 import { applyPaysuiteSubscriptionPaid } from "@/lib/payments/apply-paysuite-subscription-paid";
 
 const bodySchema = z.object({
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
   if (pay.paysuite_payment_id) {
     try {
       const remote = await paysuiteGetPayment(paysuite, pay.paysuite_payment_id);
-      if (remote.status === "paid") {
+      if (isPaysuitePaymentRecordPaid(remote)) {
         await applyPaysuiteSubscriptionPaid(service, pay.id, remote as unknown as Record<string, unknown>);
         return NextResponse.json({ alreadyPaid: true, status: "paid" });
       }
