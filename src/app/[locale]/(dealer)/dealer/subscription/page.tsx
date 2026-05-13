@@ -4,8 +4,33 @@ import { getPortalContext } from "@/lib/auth/portal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PayPendingSubscription } from "@/modules/dealer/components/pay-pending-subscription";
+import {
+  SubscriptionUpgradePlans,
+  type UpgradePackageDTO,
+  type UpgradeSubDTO,
+} from "@/modules/dealer/components/subscription-upgrade-plans";
 
 export const dynamic = "force-dynamic";
+
+function toUpgradePackageDTO(p: {
+  id: string;
+  name: string;
+  slug: string;
+  listing_limit: number;
+  price: number;
+  price_per_extra_listing: number;
+  seller_scope: string;
+}): UpgradePackageDTO | null {
+  if (p.seller_scope !== "dealer" && p.seller_scope !== "all") return null;
+  return {
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    listing_limit: p.listing_limit,
+    price: p.price,
+    price_per_extra_listing: p.price_per_extra_listing,
+  };
+}
 
 export default async function DealerSubscriptionPage() {
   const ctx = await getPortalContext();
@@ -18,7 +43,7 @@ export default async function DealerSubscriptionPage() {
 
   const service = createServiceSupabaseClient();
 
-  const [{ data: sub }, { data: packages }] = await Promise.all([
+  const [{ data: sub }, { data: packagesRaw }] = await Promise.all([
     service
       .from("dealer_subscriptions")
       .select("*")
@@ -29,11 +54,25 @@ export default async function DealerSubscriptionPage() {
     service.from("dealer_packages").select("*").eq("is_active", true).order("price"),
   ]);
 
-  const current = sub?.package_id
-    ? packages?.find((p) => p.id === sub.package_id)
+  const packages = (packagesRaw ?? [])
+    .map(toUpgradePackageDTO)
+    .filter((p): p is UpgradePackageDTO => p !== null);
+
+  const { data: currentRow } = sub?.package_id
+    ? await service.from("dealer_packages").select("*").eq("id", sub.package_id).maybeSingle()
+    : { data: null };
+
+  const current: UpgradePackageDTO | null = currentRow
+    ? {
+        id: currentRow.id,
+        name: currentRow.name,
+        slug: currentRow.slug,
+        listing_limit: currentRow.listing_limit,
+        price: Number(currentRow.price),
+        price_per_extra_listing: Number(currentRow.price_per_extra_listing),
+      }
     : null;
 
-  // Check for a pending subscription payment (may have been admin-provisioned)
   const { data: pendingPayment } =
     sub && sub.status === "pending_payment"
       ? await service
@@ -47,18 +86,40 @@ export default async function DealerSubscriptionPage() {
           .maybeSingle()
       : { data: null };
 
+  const { data: pendingUpgrade } =
+    sub && sub.status === "active"
+      ? await service
+          .from("payments")
+          .select("id, amount, target_package_id")
+          .eq("dealer_id", ctx.dealerId)
+          .eq("payment_type", "upgrade")
+          .eq("payment_status", "pending")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : { data: null };
+
   const isManager = ctx.portalRole === "dealer_manager";
 
+  const subDto: UpgradeSubDTO | null = sub
+    ? {
+        package_id: sub.package_id,
+        listings_used: sub.listings_used ?? 0,
+        started_at: sub.started_at,
+        expires_at: sub.expires_at,
+        status: sub.status,
+      }
+    : null;
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">{tNav("dealerSubscription")}</h1>
         {!isManager && (
-          <p className="text-sm text-muted-foreground">{t("managerOnlyPayments")}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("managerOnlyPayments")}</p>
         )}
       </div>
 
-      {/* Pending payment CTA — only managers can pay */}
       {sub?.status === "pending_payment" && current && isManager && (
         <PayPendingSubscription
           dealerId={ctx.dealerId}
@@ -68,54 +129,40 @@ export default async function DealerSubscriptionPage() {
         />
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t("subscriptionCurrent")}</CardTitle>
+      <Card className="overflow-hidden rounded-2xl border-border shadow-md">
+        <CardHeader className="border-b border-border/80 bg-muted/30 pb-4">
+          <CardTitle className="text-base font-semibold">{t("subscriptionCurrent")}</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-2 text-sm md:grid-cols-2">
-          <div className="flex justify-between gap-3">
+        <CardContent className="grid gap-4 pt-6 text-sm md:grid-cols-2">
+          <div className="flex justify-between gap-3 rounded-lg bg-background/80 px-3 py-2">
             <span className="text-muted-foreground">{tCommon("name")}</span>
             <span className="font-medium">{current?.name ?? "—"}</span>
           </div>
-          <div className="flex justify-between gap-3">
+          <div className="flex justify-between gap-3 rounded-lg bg-background/80 px-3 py-2">
             <span className="text-muted-foreground">{tCommon("status")}</span>
-            <Badge variant="secondary">
+            <Badge variant="secondary" className="font-medium">
               {sub?.status ? tSub(`status_${sub.status}` as "status_active") : "—"}
             </Badge>
           </div>
-          <div className="flex justify-between gap-3">
+          <div className="flex justify-between gap-3 rounded-lg bg-background/80 px-3 py-2 md:col-span-2">
             <span className="text-muted-foreground">{tSub("expires")}</span>
-            <span>{sub?.expires_at ? new Date(sub.expires_at).toLocaleDateString() : "—"}</span>
+            <span className="font-medium tabular-nums">
+              {sub?.expires_at ? new Date(sub.expires_at).toLocaleDateString() : "—"}
+            </span>
           </div>
         </CardContent>
       </Card>
 
-      <div>
-        <h2 className="mb-3 text-lg font-semibold">{t("upgrade")}</h2>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {(packages ?? []).map((p) => (
-            <Card key={p.id}>
-              <CardHeader>
-                <CardTitle className="text-base">{p.name}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Listings</span>
-                  <span>{p.listing_limit}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">{tCommon("currency")}</span>
-                  <span>{Number(p.price).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Extra</span>
-                  <span>{Number(p.price_per_extra_listing).toLocaleString()}</span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
+      {current && subDto ? (
+        <SubscriptionUpgradePlans
+          dealerId={ctx.dealerId}
+          isManager={isManager}
+          currentPackage={current}
+          subscription={subDto}
+          packages={packages}
+          pendingUpgrade={pendingUpgrade}
+        />
+      ) : null}
     </div>
   );
 }

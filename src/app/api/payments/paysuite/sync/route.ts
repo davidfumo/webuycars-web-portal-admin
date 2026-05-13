@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     .eq("id", parsed.data.paymentId)
     .maybeSingle();
 
-  if (!pay?.dealer_id || pay.payment_type !== "subscription") {
+  if (!pay?.dealer_id || (pay.payment_type !== "subscription" && pay.payment_type !== "upgrade")) {
     return NextResponse.json({ error: "payment_not_found" }, { status: 404 });
   }
 

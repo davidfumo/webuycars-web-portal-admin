@@ -85,7 +85,7 @@ export async function POST(request: Request) {
     if (row.payment_status !== "pending") {
       return NextResponse.json({ ok: true, ignored: "not_pending" });
     }
-    if (row.payment_type === "subscription") {
+    if (row.payment_type === "subscription" || row.payment_type === "upgrade") {
       try {
         await applyPaysuiteSubscriptionPaid(service, row.id, data);
       } catch (e) {

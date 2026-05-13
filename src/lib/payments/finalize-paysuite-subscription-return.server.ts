@@ -38,7 +38,12 @@ export async function finalizePaysuiteSubscriptionReturn(input: {
     .eq("id", input.paymentId)
     .maybeSingle();
 
-  if (error || !pay || pay.dealer_id !== input.dealerId || pay.payment_type !== "subscription") {
+  if (
+    error ||
+    !pay ||
+    pay.dealer_id !== input.dealerId ||
+    (pay.payment_type !== "subscription" && pay.payment_type !== "upgrade")
+  ) {
     return { kind: "invalid" };
   }
 

@@ -30,7 +30,7 @@ export async function syncPendingPaysuiteSubscriptionPaymentsForDealer(
     .from("payments")
     .select("id, paysuite_payment_id")
     .eq("dealer_id", dealerId)
-    .eq("payment_type", "subscription")
+    .in("payment_type", ["subscription", "upgrade"])
     .eq("payment_status", "pending")
     .not("paysuite_payment_id", "is", null);
 

@@ -64,7 +64,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "payment_not_found" }, { status: 404 });
   }
 
-  if (pay.payment_type !== "subscription" || pay.payment_status !== "pending") {
+  if (
+    (pay.payment_type !== "subscription" && pay.payment_type !== "upgrade") ||
+    pay.payment_status !== "pending"
+  ) {
     return NextResponse.json({ error: "invalid_payment_state" }, { status: 400 });
   }
 
@@ -111,7 +114,8 @@ export async function POST(request: Request) {
     remote = await paysuiteCreatePayment(paysuite, {
       amount: String(Number(pay.amount)),
       reference,
-      description: `WeBuyCars subscription`,
+      description:
+        pay.payment_type === "upgrade" ? "WeBuyCars subscription upgrade" : "WeBuyCars subscription",
       return_url: returnUrl,
       callback_url: callbackUrl,
       method: toPaysuiteMethod(method),

@@ -417,6 +417,7 @@ export interface Database {
           payment_type: PaymentType;
           paysuite_payment_id: string | null;
           paysuite_reference: string | null;
+          target_package_id: string | null;
         };
         Insert: {
           id?: string;
@@ -433,6 +434,7 @@ export interface Database {
           payment_type?: PaymentType;
           paysuite_payment_id?: string | null;
           paysuite_reference?: string | null;
+          target_package_id?: string | null;
         };
         Update: {
           id?: string;
@@ -449,6 +451,7 @@ export interface Database {
           payment_type?: PaymentType;
           paysuite_payment_id?: string | null;
           paysuite_reference?: string | null;
+          target_package_id?: string | null;
         };
         Relationships: [];
       };
