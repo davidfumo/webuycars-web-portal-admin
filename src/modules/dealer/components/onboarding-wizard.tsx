@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import {
   createSubscriptionCheckoutPayment,
   saveOnboardingDealer,
@@ -274,7 +275,11 @@ export function OnboardingWizard({
                 <Button
                   key={m}
                   type="button"
-                  variant={method === m ? "default" : "outline"}
+                  variant="outline"
+                  className={cn(
+                    method === m &&
+                      "border-black bg-black text-white shadow-none hover:bg-zinc-900 hover:text-white",
+                  )}
                   onClick={() => setMethod(m)}
                   disabled={pending}
                 >
@@ -283,11 +288,11 @@ export function OnboardingWizard({
               ))}
             </div>
             {!paymentId ? (
-              <LoadingButton type="button" onClick={createPayment} loading={pending}>
+              <LoadingButton type="button" variant="default" onClick={createPayment} loading={pending}>
                 {tPay("generatePayment")}
               </LoadingButton>
             ) : (
-              <LoadingButton type="button" onClick={payAndFinish} loading={pending}>
+              <LoadingButton type="button" variant="default" onClick={payAndFinish} loading={pending}>
                 {tPay("continueToCheckout")}
               </LoadingButton>
             )}

@@ -8,6 +8,7 @@ import { CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LoadingButton } from "@/components/ui/loading-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { createSubscriptionCheckoutPayment } from "@/modules/dealer/server/onboarding-actions";
 import { startPaysuiteSubscriptionCheckout } from "@/modules/dealer/lib/start-paysuite-subscription-checkout";
 import type { PaymentMethod } from "@/lib/database.types";
@@ -99,8 +100,12 @@ export function PayPendingSubscription({
             <Button
               key={m}
               type="button"
-              variant={method === m ? "default" : "outline"}
+              variant="outline"
               size="sm"
+              className={cn(
+                method === m &&
+                  "border-black bg-black text-white shadow-none hover:bg-zinc-900 hover:text-white",
+              )}
               onClick={() => setMethod(m)}
               disabled={pending}
             >
@@ -110,11 +115,11 @@ export function PayPendingSubscription({
         </div>
 
         {!paymentId ? (
-          <LoadingButton type="button" onClick={generate} loading={pending}>
+          <LoadingButton type="button" variant="default" onClick={generate} loading={pending}>
             {tPay("generatePayment")}
           </LoadingButton>
         ) : (
-          <LoadingButton type="button" onClick={pay} loading={pending}>
+          <LoadingButton type="button" variant="default" onClick={pay} loading={pending}>
             {tPay("continueToCheckout")}
           </LoadingButton>
         )}
