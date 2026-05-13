@@ -415,6 +415,8 @@ export interface Database {
           currency: string;
           gateway_reference: string | null;
           payment_type: PaymentType;
+          paysuite_payment_id: string | null;
+          paysuite_reference: string | null;
         };
         Insert: {
           id?: string;
@@ -429,6 +431,8 @@ export interface Database {
           currency?: string;
           gateway_reference?: string | null;
           payment_type?: PaymentType;
+          paysuite_payment_id?: string | null;
+          paysuite_reference?: string | null;
         };
         Update: {
           id?: string;
@@ -443,6 +447,29 @@ export interface Database {
           currency?: string;
           gateway_reference?: string | null;
           payment_type?: PaymentType;
+          paysuite_payment_id?: string | null;
+          paysuite_reference?: string | null;
+        };
+        Relationships: [];
+      };
+      payment_logs: {
+        Row: {
+          id: string;
+          payment_id: string;
+          provider_response: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          payment_id: string;
+          provider_response?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          payment_id?: string;
+          provider_response?: Json;
+          created_at?: string;
         };
         Relationships: [];
       };
@@ -644,6 +671,10 @@ export interface Database {
       };
       complete_subscription_payment_simulation: {
         Args: { p_payment_id: string };
+        Returns: undefined;
+      };
+      complete_subscription_payment_gateway: {
+        Args: { p_payment_id: string; p_gateway_reference: string };
         Returns: undefined;
       };
     };

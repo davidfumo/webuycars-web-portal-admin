@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -12,11 +12,11 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
-  completeOnboardingPayment,
   createSubscriptionCheckoutPayment,
   saveOnboardingDealer,
   saveOnboardingProfile,
 } from "@/modules/dealer/server/onboarding-actions";
+import { startPaysuiteSubscriptionCheckout } from "@/modules/dealer/lib/start-paysuite-subscription-checkout";
 import type { Database } from "@/lib/database.types";
 
 type DealerRow = Database["public"]["Tables"]["dealers"]["Row"];
@@ -40,6 +40,7 @@ export function OnboardingWizard({
   const tCommon = useTranslations("Common");
   const tPay = useTranslations("Payment");
   const router = useRouter();
+  const locale = useLocale();
 
   const [step, setStep] = useState(0);
   const [fullName, setFullName] = useState(initialFullName ?? "");
@@ -112,12 +113,25 @@ export function OnboardingWizard({
     if (!paymentId) return;
     setPending(true);
     try {
-      await completeOnboardingPayment(paymentId);
-      toast.success(t("onboardingComplete"));
-      router.replace("/dealer/dashboard");
-      router.refresh();
-    } catch {
-      toast.error(t("stepFailed"));
+      const result = await startPaysuiteSubscriptionCheckout({
+        paymentId,
+        method,
+        locale,
+      });
+      if ("alreadyPaid" in result) {
+        toast.success(t("onboardingComplete"));
+        router.replace("/dealer/dashboard");
+        router.refresh();
+        return;
+      }
+      window.location.assign(result.checkoutUrl);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg === "paysuite_not_configured") {
+        toast.error(tPay("paysuiteNotConfigured"));
+      } else {
+        toast.error(t("stepFailed"));
+      }
     } finally {
       setPending(false);
     }
@@ -252,7 +266,7 @@ export function OnboardingWizard({
         <Card>
           <CardHeader>
             <CardTitle>{t("stepPayment")}</CardTitle>
-            <CardDescription>{tPay("simulatePay")}</CardDescription>
+            <CardDescription>{tPay("checkoutDescription")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-2 md:grid-cols-3">
@@ -274,7 +288,7 @@ export function OnboardingWizard({
               </LoadingButton>
             ) : (
               <LoadingButton type="button" onClick={payAndFinish} loading={pending}>
-                {tPay("completeSimulated")}
+                {tPay("continueToCheckout")}
               </LoadingButton>
             )}
             <div className="flex gap-2">

@@ -1,17 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { toast } from "sonner";
 import { CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LoadingButton } from "@/components/ui/loading-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  createSubscriptionCheckoutPayment,
-  completeSubscriptionPayment,
-} from "@/modules/dealer/server/onboarding-actions";
+import { createSubscriptionCheckoutPayment } from "@/modules/dealer/server/onboarding-actions";
+import { startPaysuiteSubscriptionCheckout } from "@/modules/dealer/lib/start-paysuite-subscription-checkout";
 import type { PaymentMethod } from "@/lib/database.types";
 
 type Props = {
@@ -36,8 +34,8 @@ export function PayPendingSubscription({
 }: Props) {
   const t = useTranslations("Dealer");
   const tPay = useTranslations("Payment");
-  const tCommon = useTranslations("Common");
   const router = useRouter();
+  const locale = useLocale();
 
   const [method, setMethod] = useState<PaymentMethod>("mpesa");
   const [paymentId, setPaymentId] = useState<string | null>(existingPaymentId ?? null);
@@ -60,13 +58,25 @@ export function PayPendingSubscription({
     if (!paymentId) return;
     setPending(true);
     try {
-      await completeSubscriptionPayment({ paymentId, dealerId, markOnboardingDone: true });
-      toast.success(t("onboardingComplete"));
-      router.replace("/dealer/dashboard");
-      router.refresh();
+      const result = await startPaysuiteSubscriptionCheckout({
+        paymentId,
+        method,
+        locale,
+      });
+      if ("alreadyPaid" in result) {
+        toast.success(t("onboardingComplete"));
+        router.replace("/dealer/dashboard");
+        router.refresh();
+        return;
+      }
+      window.location.assign(result.checkoutUrl);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      toast.error(msg === "payment not found" ? tPay("errorNotFound") : t("stepFailed"));
+      if (msg === "paysuite_not_configured") {
+        toast.error(tPay("paysuiteNotConfigured"));
+      } else {
+        toast.error(msg === "payment_not_found" ? tPay("errorNotFound") : t("stepFailed"));
+      }
     } finally {
       setPending(false);
     }
@@ -92,7 +102,7 @@ export function PayPendingSubscription({
               variant={method === m ? "default" : "outline"}
               size="sm"
               onClick={() => setMethod(m)}
-              disabled={pending || !!paymentId}
+              disabled={pending}
             >
               {tPay(`method_${m}`)}
             </Button>
@@ -104,12 +114,9 @@ export function PayPendingSubscription({
             {tPay("generatePayment")}
           </LoadingButton>
         ) : (
-          <div className="flex items-center gap-3">
-            <LoadingButton type="button" onClick={pay} loading={pending}>
-              {tPay("completeSimulated")}
-            </LoadingButton>
-            <span className="text-xs text-muted-foreground">{tCommon("required")}: {method}</span>
-          </div>
+          <LoadingButton type="button" onClick={pay} loading={pending}>
+            {tPay("continueToCheckout")}
+          </LoadingButton>
         )}
       </CardContent>
     </Card>
