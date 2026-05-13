@@ -6,6 +6,7 @@ import { useRouter } from "@/i18n/navigation";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { DEALER_DASHBOARD_SUBSCRIPTION_PAID_QUERY } from "@/lib/payments/subscription-paid-success-query";
 
 const POLL_MS = 2500;
 const MAX_POLLS = 48;
@@ -41,7 +42,7 @@ export function PaymentReturnPolling({ paymentId }: Props) {
           redirectedRef.current = true;
           setStatus("paid");
           toast.success(t("returnSuccess"));
-          router.replace("/dealer/dashboard");
+          router.replace(`/dealer/dashboard?${DEALER_DASHBOARD_SUBSCRIPTION_PAID_QUERY}`);
           router.refresh();
           if (timerRef.current) clearInterval(timerRef.current);
           return;

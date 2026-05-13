@@ -8,20 +8,32 @@ type Props = {
   children: React.ReactNode;
 };
 
+/**
+ * Routes that must stay reachable while onboarding is incomplete — e.g. PaySuite
+ * return runs `/dealer/payment/return` before DB reflects completion; blocking here
+ * used to send paying users back to step 1 of onboarding.
+ */
+function isExemptFromOnboardingRedirect(pathname: string | null): boolean {
+  if (!pathname) return false;
+  return (
+    pathname.includes("/dealer/onboarding") || pathname.includes("/dealer/payment/return")
+  );
+}
+
 export function OnboardingGuard({ needsOnboarding, children }: Props) {
   const pathname = usePathname();
   const router = useRouter();
-  const isOnboarding = pathname?.includes("/dealer/onboarding") ?? false;
+  const exempt = isExemptFromOnboardingRedirect(pathname ?? null);
 
   useEffect(() => {
     if (!needsOnboarding) return;
-    if (isOnboarding) return;
+    if (exempt) return;
     router.replace("/dealer/onboarding");
-  }, [needsOnboarding, isOnboarding, router]);
+  }, [needsOnboarding, exempt, router]);
 
   // Block rendering dealer content while a redirect to onboarding is pending.
   // This prevents a flash of the dashboard/other pages before the navigation fires.
-  if (needsOnboarding && !isOnboarding) {
+  if (needsOnboarding && !exempt) {
     return null;
   }
 

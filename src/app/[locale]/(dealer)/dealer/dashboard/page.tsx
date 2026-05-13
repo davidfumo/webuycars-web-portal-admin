@@ -7,9 +7,17 @@ import { PayPendingSubscription } from "@/modules/dealer/components/pay-pending-
 
 export const dynamic = "force-dynamic";
 
-export default async function DealerDashboardPage() {
+export default async function DealerDashboardPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ subscription_paid?: string }>;
+}) {
+  const sp = searchParams ? await searchParams : {};
+  const showSubscriptionPaid = sp.subscription_paid === "1";
+
   const ctx = await getPortalContext();
   const t = await getTranslations("Dealer");
+  const tPay = await getTranslations("Payment");
   const tSub = await getTranslations("Subscription");
   const tCommon = await getTranslations("Common");
 
@@ -72,6 +80,21 @@ export default async function DealerDashboardPage() {
           <p className="text-sm text-muted-foreground">{t("managerOnlyPayments")}</p>
         )}
       </div>
+
+      {showSubscriptionPaid && (
+        <Card className="border-emerald-600/40 bg-emerald-50 dark:bg-emerald-950/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base text-emerald-900 dark:text-emerald-100">
+              {tPay("subscriptionPaidBannerTitle")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-emerald-900/90 dark:text-emerald-100/90">
+              {tPay("subscriptionPaidBannerBody")}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Pending payment banner */}
       {sub?.status === "pending_payment" && pkg && isManager && (
