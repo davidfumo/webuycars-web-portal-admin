@@ -23,7 +23,7 @@ export function PaymentReturnPolling({ paymentId }: Props) {
   useEffect(() => {
     let cancelled = false;
     let count = 0;
-    let timer: ReturnType<typeof setInterval> | undefined;
+    const timerRef: { current: ReturnType<typeof setInterval> | undefined } = { current: undefined };
 
     const tick = async () => {
       if (cancelled || redirectedRef.current) return;
@@ -43,25 +43,25 @@ export function PaymentReturnPolling({ paymentId }: Props) {
           toast.success(t("returnSuccess"));
           router.replace("/dealer/dashboard");
           router.refresh();
-          if (timer) clearInterval(timer);
+          if (timerRef.current) clearInterval(timerRef.current);
           return;
         }
         if (count >= MAX_POLLS) {
           setStatus("pending");
-          if (timer) clearInterval(timer);
+          if (timerRef.current) clearInterval(timerRef.current);
         }
       } catch {
         if (cancelled) return;
         setStatus("error");
-        if (timer) clearInterval(timer);
+        if (timerRef.current) clearInterval(timerRef.current);
       }
     };
 
     void tick();
-    timer = setInterval(tick, POLL_MS);
+    timerRef.current = setInterval(tick, POLL_MS);
     return () => {
       cancelled = true;
-      if (timer) clearInterval(timer);
+      if (timerRef.current) clearInterval(timerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- poll only when paymentId changes
   }, [paymentId]);
